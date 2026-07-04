@@ -46,3 +46,54 @@ Strong foundation established. Project structure, workflow, and daily operating 
 - Continue strengthening Git workflow and clean coding practices.
 
 **Status:** ✅ Day 001 Successfully Completed
+
+---
+
+---
+
+# Day 002 — Saturday, 04 July 2026
+
+## Completed
+
+- Learned Python Functions, Parameters, Return Values, Modules, Imports, and `if __name__ == "__main__"`.
+- Created the Day 002 Engineering Handbook notes.
+- Completed function-based Python practice exercises.
+- Built a menu-driven **Student Management CLI** using functions, loops, dictionaries, and input validation.
+- Created a professional README for the mini project.
+- Updated GitHub repository with all Day 002 work.
+
+---
+
+## Lessons
+
+- Functions make code reusable and easier to maintain.
+- Prefer returning values over printing directly.
+- Organize related code into modules for better structure.
+- Small projects should still follow clean coding and documentation practices.
+- Building projects reinforces concepts better than passive learning.
+
+---
+
+## Time
+
+**Planned:** 3 Hours
+
+**Actual:** ~2.5 Hours
+
+---
+
+## Confidence
+
+**9.8 / 10**
+
+Successfully completed the first real software project of the journey. Code quality, project organization, and engineering mindset improved significantly compared to Day 001.
+
+---
+
+## Tomorrow
+
+- Learn Exception Handling and File Handling.
+- Refactor the Student Management CLI using file persistence.
+- Continue improving clean code practices and project structure.
+
+**Status:** ✅ Day 002 Successfully Completed
