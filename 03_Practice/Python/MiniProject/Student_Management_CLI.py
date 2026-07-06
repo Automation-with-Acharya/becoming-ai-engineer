@@ -18,7 +18,8 @@
 # No classes yet.
 
 # Add Student function should take student name as input and assign a unique ID to the student. The ID should be an integer starting from 1 and incrementing by 1 for each new student added.
-def add_student(students):
+def add_student(filename):
+    students = load_students(filename)
     name = input("Enter student name: ")
     if len(students) == 0:
         id = 1
@@ -26,10 +27,13 @@ def add_student(students):
         id = max(students.keys()) + 1
     students[id] = name
     
+    save_students(filename, students)
     print(f"Student {name} added successfully.")
+    
 
 # View Students function should display the list of students with their IDs and names. If there are no students, it should display a message indicating that there are no students.
-def view_students(students):
+def view_students(filename):
+    students = load_students(filename)
     if not students: # or len(students) == 0
         print("No students found.")
     else:
@@ -40,7 +44,8 @@ def view_students(students):
     print("\n")
 
 # Search Student function should allow the user to search for a student by ID or name. If the student is found, it should display the student's ID and name. If not found, it should display a message indicating that the student was not found.
-def search_student(students):
+def search_student(filename):
+    students = load_students(filename)
     user_input = input("Enter student ID or student name to search: ")
     try:
         searched_id = int(user_input)
@@ -62,7 +67,8 @@ def search_student(students):
 
 
 # Delete Student function should allow the user to delete a student by ID or name. If the student is found and deleted, it should display a message indicating that the student was deleted successfully. If not found, it should display a message indicating that the student was not found.
-def delete_student(students):
+def delete_student(filename):
+    students = load_students(filename)
     user_input = input("Enter student ID or student name to delete: ")
     try:
         delete_id = int(user_input)
@@ -84,10 +90,35 @@ def delete_student(students):
         else:
             print("Student not found.")
 
+    finally:
+        save_students(filename, students)
+
+
+# Load students from a file
+def load_students(filename):
+    students = {}
+    try:
+        with open(filename, "r") as file:
+            for line in file:
+                id, name = line.strip().split(",")
+                students[int(id)] = name
+    except FileNotFoundError:
+        print(f"File '{filename}' not found. Starting with an empty student list.")
+
+    if len(students) == 0:
+        print("Students data file is empty. Starting with an empty student list.")
+    return students
+
+
+# Save students to a file
+def save_students(filename, students):
+    with open(filename, "w") as file:
+        for id, name in students.items():
+            file.write(f"{id},{name}\n")
 
 def main():
     
-    students = {}
+    students_data = "E:\\Career-Transformation\\03_Practice\\Python\\MiniProject\\students.txt"
 
     while True:
         print("\nMenu:")
@@ -100,13 +131,13 @@ def main():
         choice = input("Enter your choice (1-5): ")
 
         if choice == '1':
-            add_student(students)
+            add_student(students_data)
         elif choice == '2':
-            view_students(students)
+            view_students(students_data)
         elif choice == '3':
-            search_student(students)
+            search_student(students_data)
         elif choice == '4':
-            delete_student(students)
+            delete_student(students_data)
         elif choice == '5':
             print("Exiting the program.")
             break
