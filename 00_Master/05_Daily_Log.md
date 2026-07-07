@@ -152,3 +152,54 @@ Completed the first major upgrade to an existing project by introducing persiste
 - Continue improving project architecture, code organization, and maintainability.
 
 **Status:** ✅ Day 003 Successfully Completed
+
+---
+
+---
+
+# Day 004 — Tuesday, 07 July 2026
+
+## Completed
+
+- Learned Object-Oriented Programming fundamentals: Classes, Objects, Constructors, Instance Variables, Methods, and `self`.
+- Completed hands-on OOP experiments and five class-based practice exercises.
+- Created the Day 004 Engineering Handbook notes.
+- Refactored the Student Management CLI from procedural programming to an object-oriented design using separate `Student` and `StudentManager` classes.
+- Improved project structure by separating responsibilities into multiple modules.
+- Updated project documentation and pushed all Day 004 work to GitHub.
+
+---
+
+## Lessons
+
+- OOP models real-world entities using objects that combine data and behaviour.
+- Constructors initialize object state automatically.
+- `self` represents the current object and provides access to its data.
+- Separating responsibilities into different classes makes applications easier to maintain and extend.
+- Good software architecture begins with clear responsibilities rather than complex code.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully transitioned from procedural programming to object-oriented design. The Student Management CLI now has a cleaner, more maintainable architecture and reflects real-world software engineering practices.
+
+---
+
+## Tomorrow
+
+- Learn the four pillars of OOP: Encapsulation, Inheritance, Polymorphism, and Abstraction.
+- Refactor the project using stronger object-oriented design principles.
+- Continue improving project architecture and code quality.
+
+**Status:** ✅ Day 004 Successfully Completed
