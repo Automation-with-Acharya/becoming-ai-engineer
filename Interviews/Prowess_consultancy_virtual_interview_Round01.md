@@ -1,8 +1,8 @@
 # Interview Notes - Prowess Consulting
 
-**Date:** 08 July 2026
-**Company:** Prowess Consulting
-**Role:** Full Stack Engineer
+**Date:** 08 July 2026 |
+**Company:** Prowess Consulting |
+**Role:** Full Stack Engineer |
 **Location:** Ahmedabad (Hybrid)
 
 ---

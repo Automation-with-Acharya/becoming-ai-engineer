@@ -1,8 +1,8 @@
 # Infosys Interview Debrief
 
-**Date:** July 5, 2026
-**Company:** Infosys
-**Role (Probable):** Team Lead – Production Support (Exact role not specified)
+**Date:** July 5, 2026 |
+**Company:** Infosys |
+**Role (Probable):** Team Lead – Production Support (Exact role not specified) |
 **Interview Type:** AI Video Interview (No human interviewer)
 
 ---
