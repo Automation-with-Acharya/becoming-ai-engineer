@@ -203,3 +203,54 @@ Successfully transitioned from procedural programming to object-oriented design.
 - Continue improving project architecture and code quality.
 
 **Status:** ✅ Day 004 Successfully Completed
+
+---
+
+---
+
+# Day 005 — Thursday, 09 July 2026
+
+## Completed
+
+- Learned Git fundamentals, version control workflow, and essential Git commands.
+- Learned SQL fundamentals including databases, tables, rows, columns, primary keys, and CRUD operations.
+- Practiced writing basic SQL queries for creating tables, inserting, retrieving, updating, and deleting records.
+- Created Git and SQL reference notes for future revision.
+- Updated the GitHub repository with all Day 005 learning materials.
+
+---
+
+## Lessons
+
+- Git tracks project history and enables safe version control.
+- Meaningful commits and a consistent Git workflow are essential engineering practices.
+- SQL is the standard language for interacting with relational databases.
+- Databases provide structured, scalable, and reliable data storage compared to text files.
+- Every new technology should directly support the evolution of real projects.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully built a solid foundation in Git and SQL. The roadmap is now expanding beyond Python into complete backend engineering skills.
+
+---
+
+## Tomorrow
+
+- Install and explore PostgreSQL.
+- Connect Python with a real database.
+- Replace file-based storage in the Student Management project with database operations.
+- Continue building production-oriented backend engineering skills.
+
+**Status:** ✅ Day 005 Successfully Completed
