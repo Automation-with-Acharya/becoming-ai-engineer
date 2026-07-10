@@ -254,3 +254,54 @@ Successfully built a solid foundation in Git and SQL. The roadmap is now expandi
 - Continue building production-oriented backend engineering skills.
 
 **Status:** ✅ Day 005 Successfully Completed
+
+---
+
+---
+
+# Day 006 — Friday, 10 July 2026
+
+## Completed
+
+- Learned relational database design, normalization basics, and database relationships.
+- Understood Primary Keys, Foreign Keys, and One-to-One, One-to-Many, and Many-to-Many relationships.
+- Designed normalized database schemas for Student Management and Library Management systems.
+- Practiced writing SQL scripts for creating tables, inserting data, updating records, deleting records, and retrieving data.
+- Created the Day 006 Engineering Handbook and updated the GitHub repository with all learning materials.
+
+---
+
+## Lessons
+
+- Good database design begins before writing SQL queries.
+- Primary Keys uniquely identify records, while Foreign Keys establish relationships between tables.
+- Normalized schemas reduce duplication and improve data consistency.
+- Real-world applications separate entities into related tables instead of storing everything together.
+- Designing databases is as important as writing queries.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully built the conceptual foundation for relational database design. Ready to move from writing SQL scripts to working with a real PostgreSQL database.
+
+---
+
+## Tomorrow
+
+- Install PostgreSQL and pgAdmin 4.
+- Execute SQL scripts in a real database.
+- Connect Python with PostgreSQL.
+- Begin migrating the Student Management project from text-file storage to database-backed storage.
+
+**Status:** ✅ Day 006 Successfully Completed
