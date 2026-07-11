@@ -2,8 +2,8 @@
 -- ==================================================
 -- DATABASE SETUP
 -- ==================================================
-CREATE DATABASE student_db;
-USE student_db;
+-- CREATE DATABASE student_db;
+-- USE student_db;
 
 -- ==================================================
 -- STUDENTS TABLE: Store student information

@@ -8,11 +8,11 @@
 
 -- Step 1: Create the database named 'student_db'
 -- This creates a new database container to store all related tables and data
-CREATE DATABASE student_db;
+-- CREATE DATABASE student_db;
 
 -- Step 2: Select the 'student_db' database for use
 -- All subsequent SQL commands will execute within this database context
-USE student_db;
+-- USE student_db;
 
 -- Step 3: Create the 'students' table structure
 -- This defines the schema with 4 columns to store student information
