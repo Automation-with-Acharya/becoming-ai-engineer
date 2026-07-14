@@ -357,3 +357,54 @@ Successfully transitioned from database design to a real database-driven applica
 - Begin migrating the Student Management project from file-based storage to a PostgreSQL-backed architecture.
 
 **Status:** ✅ Day 007 Successfully Completed
+
+---
+
+---
+
+# Day 008 — Sunday, 12 July 2026
+
+## Completed
+
+- Learned CRUD operations (Create, Read, Update, Delete) using Python and PostgreSQL.
+- Understood SQL Injection attacks and implemented parameterized SQL queries for secure database access.
+- Built a reusable `DatabaseHelper` class to centralize database connectivity and query execution.
+- Refactored the Student Management CLI to replace file-based storage with PostgreSQL.
+- Created the Day 008 Engineering Handbook and updated the GitHub repository with all learning materials.
+
+---
+
+## Lessons
+
+- CRUD operations form the foundation of every backend application.
+- Parameterized queries protect applications against SQL Injection attacks.
+- Centralizing database logic inside a helper class improves maintainability and code reuse.
+- Separating application logic from database operations is the first step toward clean backend architecture.
+- Production-quality software emphasizes security, modularity, and maintainability as much as functionality.
+
+---
+
+## Time
+
+**Planned:** 3 Hours
+
+**Actual:** ~3.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully transitioned from direct database interaction to a reusable database access layer while adopting secure coding practices. The Student Management project now resembles the architecture used in real backend applications and is well positioned for the upcoming FastAPI phase.
+
+---
+
+## Tomorrow
+
+- Learn Repository Pattern and Data Access Layer (DAL).
+- Introduce Service Layer concepts and Clean Architecture fundamentals.
+- Refactor the Student Management project into a more modular backend structure.
+- Prepare the project for FastAPI integration.
+
+**Status:** ✅ Day 008 Successfully Completed
