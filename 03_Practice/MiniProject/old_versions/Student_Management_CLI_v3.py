@@ -153,4 +153,3 @@ def main():
 if __name__ == "__main__":
     print("\n---------- Welcome to Student Management CLI ----------")
     main()
-
