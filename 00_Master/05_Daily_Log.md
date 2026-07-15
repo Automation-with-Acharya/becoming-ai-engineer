@@ -408,3 +408,54 @@ Successfully transitioned from direct database interaction to a reusable databas
 - Prepare the project for FastAPI integration.
 
 **Status:** ✅ Day 008 Successfully Completed
+
+---
+
+---
+
+# Day 009 — Wednesday, 15 July 2026
+
+## Completed
+
+- Learned Layered Architecture, Separation of Concerns, Repository Pattern, Data Access Layer (DAL), Service Layer, and Clean Architecture fundamentals.
+- Studied how enterprise backend applications organize responsibilities across multiple layers.
+- Refactored the Student Management project into a layered architecture using Models, Services, Repositories, and a reusable Database Helper.
+- Reviewed and understood the complete application flow generated with GitHub Copilot, including the responsibility of every layer and file.
+- Created the Day 009 Engineering Handbook with architecture diagrams and updated the GitHub repository with the new project structure and documentation.
+
+---
+
+## Lessons
+
+- Clean Architecture separates responsibilities, making applications easier to maintain, test, and extend.
+- The Repository Pattern hides database implementation details from business logic.
+- The Service Layer contains business rules and coordinates application behavior.
+- Separation of Concerns reduces coupling and improves code readability.
+- AI coding assistants are most valuable when used to study, understand, and refine architecture—not as a replacement for learning.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully transitioned from database-centric programming to understanding professional backend architecture. The Student Management project now follows a layered design that is well prepared for FastAPI integration and future production-style enhancements.
+
+---
+
+## Tomorrow
+
+- Learn FastAPI fundamentals.
+- Build the first REST API with GET and POST endpoints.
+- Understand request/response models and automatic Swagger documentation.
+- Begin exposing the Student Management project through web APIs.
+
+**Status:** ✅ Day 009 Successfully Completed
