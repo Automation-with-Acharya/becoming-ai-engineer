@@ -39,7 +39,7 @@ async def get_student(student_id: int) -> Student:
 async def create_student(student: StudentCreate) -> Student:
     """Create a new student and store it in memory."""
     new_student = Student(
-        id=len(students) + 1,
+        id=max(student.id for student in students) + 1,
         name=student.name,
         age=student.age,
         city=student.city,
