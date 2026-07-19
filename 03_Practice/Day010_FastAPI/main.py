@@ -46,3 +46,4 @@ async def create_student(student: StudentCreate) -> Student:
     )
     students.append(new_student)
     return new_student
+
