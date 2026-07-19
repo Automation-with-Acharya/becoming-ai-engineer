@@ -511,3 +511,54 @@ Successfully built the first REST API using FastAPI and understood how modern ba
 - Build complete CRUD REST APIs connected to a real database.
 
 **Status:** ✅ Day 010 Successfully Completed
+
+---
+
+---
+
+# Day 011 — Sunday, 19 July 2026
+
+## Completed
+
+- Learned FastAPI Request Models and Response Models using Pydantic.
+- Understood Path Parameters, Query Parameters, and automatic request validation.
+- Built FastAPI endpoints for retrieving and creating student records.
+- Tested APIs through Swagger UI and observed FastAPI's automatic validation behavior.
+- Created the Day 011 Engineering Handbook with architecture diagrams and updated the GitHub repository with all learning materials.
+
+---
+
+## Lessons
+
+- Pydantic models provide automatic validation, type conversion, and API documentation.
+- Path Parameters identify specific resources, while Query Parameters filter or customize results.
+- FastAPI automatically generates interactive API documentation through Swagger UI.
+- Separating Request Models and Response Models creates cleaner and more secure APIs.
+- Layered backend architecture integrates naturally with FastAPI, making applications easier to maintain and extend.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully built and tested REST API endpoints using FastAPI and Pydantic while understanding the complete request lifecycle from client request to JSON response. The Student Management project is now ready to integrate FastAPI with the Service and Repository layers in the next phase.
+
+---
+
+## Tomorrow
+
+- Learn FastAPI Dependency Injection and APIRouter.
+- Organize APIs into modular route files.
+- Connect FastAPI directly with the Service and Repository layers.
+- Build a production-style backend structure for the Student Management project.
+
+**Status:** ✅ Day 011 Successfully Completed
