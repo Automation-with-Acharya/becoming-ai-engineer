@@ -562,3 +562,58 @@ Successfully built and tested REST API endpoints using FastAPI and Pydantic whil
 - Build a production-style backend structure for the Student Management project.
 
 **Status:** ✅ Day 011 Successfully Completed
+
+---
+
+---
+
+# Day 012 — Tuesday, 21 July 2026
+
+## Completed
+
+- Learned Dependency Injection (DI) and FastAPI's `Depends()` mechanism.
+- Understood APIRouter and modular API organization for larger FastAPI applications.
+- Refactored the Student Management API into a cleaner project structure using routers, services, and models.
+- Built API endpoints using Dependency Injection while maintaining separation of responsibilities.
+- Created the Day 012 Engineering Handbook with architecture diagrams and updated the GitHub repository with the new project structure and documentation.
+
+---
+
+## Lessons
+
+- Dependency Injection reduces coupling by separating object creation from object usage.
+- `Depends()` allows FastAPI to automatically provide required services and dependencies.
+- APIRouter keeps APIs modular, maintainable, and easier to scale.
+- Thin routers and well-defined service layers improve readability and long-term maintainability.
+- The architectural patterns learned today are common across enterprise frameworks such as FastAPI, ASP.NET Core, Spring Boot, and NestJS.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully reorganized the FastAPI application into a modular, production-style structure using Dependency Injection and APIRouter. The project now follows enterprise backend architecture principles and is ready for full CRUD integration with PostgreSQL.
+
+---
+
+## Tomorrow
+
+- Connect FastAPI endpoints to the Repository layer and PostgreSQL.
+- Build complete CRUD APIs with proper HTTP status codes and exception handling.
+- Introduce production-style error responses and API best practices.
+- Continue evolving the Student Management project into a deployment-ready backend service.
+
+**Status:** ✅ Day 012 Successfully Completed
+
+---
+
+---
