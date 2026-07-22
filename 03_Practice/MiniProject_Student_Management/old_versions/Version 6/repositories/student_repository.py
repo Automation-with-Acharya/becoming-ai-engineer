@@ -5,66 +5,39 @@ This module implements the Repository Pattern for Student entity data access on 
 Decouples database operations from higher-level business logic.
 """
 
-from abc import ABC, abstractmethod
+# from abc import ABC, abstractmethod
 from models.student import Student
 from database.database_helper import DatabaseHelper
 
 
-class StudentRepository(ABC):
-    """
-    Abstract interface defining the contract for Student repository operations.
-    
-    WHY IS THIS REQUIRED? (Architectural Context)
-    --------------------------------------------
-    1. Dependency Inversion Principle (DIP): High-level modules (e.g., StudentService)
-       should not depend directly on low-level database details (like PostgresStudentRepository).
-       Instead, they must depend on this abstraction. This decouples business logic from specific
-       storage technologies.
-    2. Modularity & Swappability: If we decide to swap our storage backend in the future (e.g.,
-       moving from PostgreSQL to MongoDB, Firestore, or an in-memory database), we only need to
-       write a new implementation of StudentRepository. The service layer stays untouched.
-    3. Testability (Mocking): During unit testing of the service layer, we can easily inject
-       a mock repository that inherits from StudentRepository, avoiding actual database connection setup
-       during testing.
-    """
+# class StudentRepository(ABC):
+#     """
+#     Abstract interface for Student repository operations.
+#     """
 
-    @abstractmethod
-    def add_student(self, student: Student) -> Student:
-        """
-        Add a new student to storage.
-        """
-        raise NotImplementedError
+#     @abstractmethod
+#     def add_student(self, student: Student) -> Student:
+#         raise NotImplementedError
 
-    @abstractmethod
-    def get_all_students(self) -> list[Student]:
-        """
-        Retrieve all students from storage.
-        """
-        raise NotImplementedError
+#     @abstractmethod
+#     def get_all_students(self) -> list[Student]:
+#         raise NotImplementedError
 
-    @abstractmethod
-    def get_student_by_id(self, student_id: int) -> Student | None:
-        """
-        Retrieve a student by their unique ID from storage.
-        """
-        raise NotImplementedError
+#     @abstractmethod
+#     def get_student_by_id(self, student_id: int) -> Student | None:
+#         raise NotImplementedError
 
-    @abstractmethod
-    def search_students(self, query: str) -> list[Student]:
-        """
-        Search for students using a name/query string.
-        """
-        raise NotImplementedError
+#     @abstractmethod
+#     def search_students(self, query: str) -> list[Student]:
+#         raise NotImplementedError
 
-    @abstractmethod
-    def delete_student(self, student_id: int) -> bool:
-        """
-        Delete a student from storage.
-        """
-        raise NotImplementedError
+#     @abstractmethod
+#     def delete_student(self, student_id: int) -> bool:
+#         raise NotImplementedError
 
 
-class PostgresStudentRepository(StudentRepository):    
+#class PostgresStudentRepository(StudentRepository):
+class PostgresStudentRepository():    
     """
     PostgreSQL repository implementation managing CRUD operations for Students.
     """

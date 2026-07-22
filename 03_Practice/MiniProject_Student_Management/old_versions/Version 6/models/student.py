@@ -20,4 +20,4 @@ class Student(BaseModel):
     id: int | None = None
     name: str
     age: int | None = None
-    city: str | None = ""
+    city: str = ""

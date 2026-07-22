@@ -4,35 +4,30 @@ Database Helper Module.
 This module manages PostgreSQL database connections and SQL query executions using psycopg library.
 """
 
-import os
 import psycopg
 
 
 class DatabaseHelper:
     """
     A helper class to manage PostgreSQL database connections and basic operations.
-    Supports configuration via environment variables for deployment flexibility.
     """
 
-    def __init__(self, dbname=None, user=None, password=None, host=None, port=None):
+    def __init__(self, dbname="student_db", user="postgres", password="password@postgres", host="localhost", port="5432"):
         """
-        Initialize database connection settings. If arguments are not passed,
-        they will fall back to environment variables or safe defaults.
+        Initialize database connection settings.
 
         Args:
-            dbname (str, optional): PostgreSQL database name.
-            user (str, optional): PostgreSQL username.
-            password (str, optional): PostgreSQL password.
-            host (str, optional): Database server host.
-            port (str, optional): Database server port.
+            dbname (str): PostgreSQL database name. Defaults to 'student_db'.
+            user (str): PostgreSQL username. Defaults to 'postgres'.
+            password (str): PostgreSQL password.
+            host (str): Database server host. Defaults to 'localhost'.
+            port (str): Database server port. Defaults to '5432'.
         """
-        # Read from environment variables if not passed explicitly, or fall back to CLI defaults.
-        # This makes it easy to transition from local development to production or containerized environments.
-        self.dbname = dbname or os.getenv("DB_NAME", "student_db")
-        self.user = user or os.getenv("DB_USER", "postgres")
-        self.password = password or os.getenv("DB_PASSWORD", "password@postgres")
-        self.host = host or os.getenv("DB_HOST", "localhost")
-        self.port = port or os.getenv("DB_PORT", "5432")
+        self.dbname = dbname
+        self.user = user
+        self.password = password
+        self.host = host
+        self.port = port
         self.connection = None
 
     def connect(self):
@@ -50,26 +45,20 @@ class DatabaseHelper:
                 host=self.host,
                 port=self.port,
             )
-            # Ensure the students table exists with all required columns
+            # Ensure the students table exists
             self._create_table_if_not_exists()
         return self.connection
 
     def _create_table_if_not_exists(self):
         """
         Create the 'students' table if it does not already exist in PostgreSQL.
-        Includes all columns: id, name, age, city.
         """
         with self.connection.cursor() as cur:
-            # We add 'age' and 'city' columns to the create statement.
-            # In the original CLI version, the table only had id and name, but the models
-            # and repository queried age and city, which would fail if the database table didn't have them.
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS students (
                     id INTEGER PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    age INTEGER,
-                    city VARCHAR(100)
+                    name VARCHAR(100) NOT NULL
                 )
                 """
             )

@@ -1,105 +1,172 @@
 """
 Student Router Module.
 
-This module handles routing user requests and managing CLI user interface interaction.
-Delegates requests to StudentService and formats output responses.
+This module defines the REST API routes for the Student entity using FastAPI's APIRouter.
+It maps incoming HTTP requests to corresponding business operations in the StudentService
+and handles HTTP exception mapping.
+
+Why is Dependency Injection (DI) used here?
+------------------------------------------
+In this router, we inject `StudentService` into each path operation function using FastAPI's `Depends`.
+This means:
+1. The route handlers do not need to know how to instantiate `StudentService`, `StudentRepository`, or `DatabaseHelper`.
+2. It makes path operations easy to unit test by overriding the dependency providers.
+3. Decouples the routing layer entirely from the creation and lifecycle of service resources.
 """
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from models.student import Student
 from services.student_service import StudentService
+from dependencies import get_student_service
+
+# Initialize the router. We prefix all endpoints with '/students' to group related actions together.
+router = APIRouter(
+    prefix="/students",
+    tags=["Students"],
+)
 
 
-class StudentRouter:
+@router.post(
+    "/",
+    response_model=Student,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new student",
+    description="Creates a new student profile in the database. Validates the student name prior to insertion."
+)
+def create_student(
+    student_data: Student,
+    service: StudentService = Depends(get_student_service)
+) -> Student:
     """
-    Router class handling CLI interactions and routing commands for Student operations.
+    HTTP POST Route to register a new student.
+    
+    Args:
+        student_data (Student): The student model containing student details.
+        service (StudentService): The injected StudentService instance.
+
+    Returns:
+        Student: The created student record populated with database-generated ID.
+
+    HTTP Error Handling:
+        - 400 Bad Request: Raised via global exception handlers if student name validation fails.
+        - 500 Internal Server Error: Raised if database insert fails.
     """
+    # Delegate name validation and insertion to service layer.
+    # Any ValueError raised by validation will propagate and be caught by the global 
+    # exception handler in main.py, producing a consistent HTTP 400 response.
+    return service.add_student(
+        name=student_data.name,
+        age=student_data.age,
+        city=student_data.city
+    )
 
-    def __init__(self, service: StudentService):
-        """
-        Initialize StudentRouter with StudentService instance.
 
-        Args:
-            service (StudentService): Service instance for business logic.
-        """
-        self.service = service
+@router.get(
+    "/",
+    response_model=list[Student],
+    status_code=status.HTTP_200_OK,
+    summary="Get all students",
+    description="Retrieve a complete list of all registered students."
+)
+def get_all_students(
+    service: StudentService = Depends(get_student_service)
+) -> list[Student]:
+    """
+    HTTP GET Route to retrieve all student records.
 
-    def display_menu(self):
-        """Display CLI options menu."""
-        print("\nMenu:")
-        print("1. Add Student")
-        print("2. View Students")
-        print("3. Search Student")
-        print("4. Delete Student")
-        print("5. Exit")
+    Args:
+        service (StudentService): The injected StudentService instance.
 
-    def handle_add_student(self):
-        """Prompt user and process adding a new student."""
-        name = input("Enter student name: ").strip()
-        try:
-            student = self.service.add_student(name)
-            print(f"Student {student.name} added successfully.")
-        except ValueError as exc:
-            print(str(exc))
+    Returns:
+        list[Student]: A list of all students. Returns empty list if no students are registered.
+    """
+    return service.get_all_students()
 
-    def handle_view_students(self):
-        """Display list of all registered students."""
-        students = self.service.get_all_students()
-        if not students:
-            print("No students found.")
-            return
 
-        print("List of Students:")
-        for student in students:
-            print(f"ID: {student.id}, Name: {student.name}")
+@router.get(
+    "/search",
+    response_model=list[Student],
+    status_code=status.HTTP_200_OK,
+    summary="Search students by name",
+    description="Search for students with names matching a query using case-insensitive search."
+)
+def search_students(
+    query: str,
+    service: StudentService = Depends(get_student_service)
+) -> list[Student]:
+    """
+    HTTP GET Route to search students by name.
 
-    def handle_search_student(self):
-        """Prompt user and search for students by ID or name keyword."""
-        query = input("Enter student ID or student name to search: ").strip()
-        if query.isdigit():
-            student = self.service.get_student_by_id(int(query))
-            if student:
-                print(f"Student found: ID: {student.id}, Name: {student.name}")
-            else:
-                print("Student not found.")
-            return
+    Args:
+        query (str): The search query parameter.
+        service (StudentService): The injected StudentService instance.
 
-        students = self.service.search_students(query)
-        if students:
-            print(f"{len(students)} Student(s) found:")
-            for student in students:
-                print(f"ID: {student.id}, Name: {student.name}")
-        else:
-            print("Student not found.")
+    Returns:
+        list[Student]: List of students matching the search query.
+    """
+    return service.search_students(query)
 
-    def handle_delete_student(self):
-        """Prompt user and delete a student by ID."""
-        student_id_input = input("Enter student ID to delete: ").strip()
-        if not student_id_input.isdigit():
-            print("Please enter a valid numeric student ID.")
-            return
 
-        deleted = self.service.delete_student(int(student_id_input))
-        if deleted:
-            print("Student deleted successfully.")
-        else:
-            print("Student not found.")
+@router.get(
+    "/{student_id}",
+    response_model=Student,
+    status_code=status.HTTP_200_OK,
+    summary="Get a student by ID",
+    description="Retrieve a specific student's profile details using their unique integer ID."
+)
+def get_student_by_id(
+    student_id: int,
+    service: StudentService = Depends(get_student_service)
+) -> Student:
+    """
+    HTTP GET Route to find a specific student.
 
-    def start(self):
-        """Start the interactive CLI menu loop."""
-        print("\n---------- Welcome to Student Management CLI ----------")
-        while True:
-            self.display_menu()
-            choice = input("Enter your choice (1-5): ").strip()
+    Args:
+        student_id (int): The unique identifier of the student.
+        service (StudentService): The injected StudentService.
 
-            if choice == "1":
-                self.handle_add_student()
-            elif choice == "2":
-                self.handle_view_students()
-            elif choice == "3":
-                self.handle_search_student()
-            elif choice == "4":
-                self.handle_delete_student()
-            elif choice == "5":
-                print("Exiting the program.")
-                break
-            else:
-                print("Invalid choice. Please try again.")
+    Returns:
+        Student: The found student model.
+
+    HTTP Error Handling:
+        - 404 Not Found: Raised if a student with the given ID does not exist in the database.
+    """
+    student = service.get_student_by_id(student_id)
+    if student is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Student with ID {student_id} not found."
+        )
+    return student
+
+
+@router.delete(
+    "/{student_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete a student by ID",
+    description="Permanently delete a student's profile record from the database."
+)
+def delete_student(
+    student_id: int,
+    service: StudentService = Depends(get_student_service)
+):
+    """
+    HTTP DELETE Route to remove a student.
+
+    Args:
+        student_id (int): Unique identifier of the student to delete.
+        service (StudentService): Injected StudentService.
+
+    Returns:
+        dict: Confirmation message of successful deletion.
+
+    HTTP Error Handling:
+        - 404 Not Found: Raised if a student with the given ID does not exist.
+    """
+    deleted = service.delete_student(student_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Student with ID {student_id} not found. Deletion failed."
+        )
+    return {"message": f"Student with ID {student_id} deleted successfully."}

@@ -1,66 +1,219 @@
 # Student Management System
 
-A modular Python application built using **Clean Architecture principles** and the **Repository Pattern** with **psycopg** (PostgreSQL).
+A modular Python **REST API** built using **FastAPI**, **Clean Architecture principles**, the **Repository Pattern**, and **Dependency Injection** — backed by **PostgreSQL** via `psycopg`.
+
+---
+
+## 🆕 What Changed Today
+
+| Area | Before | After |
+|---|---|---|
+| **Interface** | CLI (terminal menu) | REST API (HTTP endpoints via FastAPI) |
+| **Entry Point** | `main.py` (CLI loop) | `main.py` (FastAPI app) + `app.py` (Uvicorn runner) |
+| **Student Model** | `id`, `name` | `id`, `name`, `age`, `city` |
+| **Database Table** | `id`, `name` only | `id`, `name`, `age`, `city` |
+| **Dependency Wiring** | Manual instantiation | FastAPI `Depends()` injection chain |
+| **Error Handling** | `print()` / bare exceptions | Global `ValueError` → HTTP 400 handler |
+| **App Lifecycle** | No lifecycle management | `@asynccontextmanager` lifespan (startup/shutdown) |
+| **Search** | Basic string scan | Case-insensitive PostgreSQL `ILIKE` query |
+| **API Docs** | None | Auto-generated Swagger UI at `/docs` |
 
 ---
 
 ## 📁 Project Structure
 
 ```text
-StudentManagement/
+MiniProject_Student_Management/
 │
-├── main.py                     # Main application entry point
+├── app.py                          # Uvicorn runner: launches the FastAPI server with hot-reload
+├── main.py                         # FastAPI app: lifespan hooks, router registration, error handlers
+├── dependencies.py                 # DI module: wires DatabaseHelper → Repository → Service
 │
 ├── routers/
-│   └── students.py             # Router layer: CLI menu & user interaction
+│   └── students.py                 # Router layer: HTTP routes & request/response handling
 │
 ├── services/
-│   └── student_service.py      # Service layer: Encapsulates business logic
+│   └── student_service.py          # Service layer: business logic & schema validation orchestration
 │
 ├── repositories/
-│   └── student_repository.py   # Repository layer: PostgreSQL persistence using psycopg
+│   └── student_repository.py       # Repository layer: abstract interface + PostgreSQL implementation
 │
 ├── database/
-│   └── database_helper.py      # Database helper: Manages PostgreSQL connections & queries
+│   └── database_helper.py          # DB helper: connection management & query execution via psycopg
 │
 ├── models/
-│   └── student.py              # Domain model: Defines Student entity (id, name)
+│   └── student.py                  # Domain model: Pydantic Student entity (id, name, age, city)
 │
 ├── schemas/
-│   └── student_schema.py       # Schema layer: Validates and cleans student input data
+│   └── student_schema.py           # Input validation: sanitizes & validates student name
 │
-└── README.md                   # Project documentation
+└── README.md                       # Project documentation
 ```
 
 ---
 
 ## 💡 Architecture Overview
 
-- **Models (`models/student.py`)**: Defines the core `Student` data structure (`id`, `name`).
-- **Schemas (`schemas/student_schema.py`)**: Validates input parameters (ensures non-empty names).
-- **Database Helper (`database/database_helper.py`)**: Manages PostgreSQL connection details and query execution using `psycopg`.
-- **Repositories (`repositories/student_repository.py`)**: Handles PostgreSQL persistence and database access.
-- **Services (`services/student_service.py`)**: Contains business logic separating UI from DB logic.
-- **Routers (`routers/students.py`)**: Handles CLI user interaction and request dispatching.
-- **Main (`main.py`)**: Bootstraps and ties all layers together.
-
----
-
-## 🚀 How to Run
-
-1. Make sure PostgreSQL is running locally on port 5432.
-2. Create or use a database named `student_db`.
-3. Run the application:
-
-```bash
-python main.py
 ```
+HTTP Request
+     │
+     ▼
+┌─────────────────┐
+│  Router Layer   │  routers/students.py       ← maps HTTP verbs to service calls
+│  (FastAPI)      │
+└────────┬────────┘
+         │  FastAPI Depends()
+         ▼
+┌─────────────────┐
+│ Service Layer   │  services/student_service.py  ← business logic + schema validation
+└────────┬────────┘
+         │  depends on abstract interface
+         ▼
+┌─────────────────┐
+│ Repository      │  repositories/student_repository.py
+│ (Abstract ABC)  │      StudentRepository (ABC)
+│ + Postgres Impl │      PostgresStudentRepository (concrete)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Database Helper │  database/database_helper.py  ← psycopg connection + SQL execution
+└─────────────────┘
+         │
+         ▼
+    PostgreSQL DB
+```
+
+### Layer Responsibilities
+
+| Layer | File | Responsibility |
+|---|---|---|
+| **Model** | `models/student.py` | Defines `Student` Pydantic schema (`id`, `name`, `age`, `city`) |
+| **Schema** | `schemas/student_schema.py` | Validates & sanitizes raw user input (e.g. non-empty name) |
+| **Database Helper** | `database/database_helper.py` | Manages connection lifecycle, executes raw SQL via `psycopg` |
+| **Repository** | `repositories/student_repository.py` | Abstracts storage; `PostgresStudentRepository` implements CRUD |
+| **Service** | `services/student_service.py` | Orchestrates validation + repository calls; pure business logic |
+| **Router** | `routers/students.py` | Maps HTTP endpoints to service operations; raises `HTTPException` |
+| **DI Module** | `dependencies.py` | Single-responsibility wiring via `Depends()` chain |
+| **Main App** | `main.py` | Bootstraps FastAPI, registers router, defines lifespan & error handlers |
+| **Runner** | `app.py` | Launches Uvicorn server with hot-reload enabled |
 
 ---
 
 ## ✨ Features
 
-- ➕ Add a student with a generated ID
-- 📋 View all students
-- 🔍 Search students by ID or name
-- ❌ Delete a student by ID
+### REST API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Root health check & welcome message |
+| `POST` | `/students/` | Create a new student (validates name) |
+| `GET` | `/students/` | Retrieve all registered students |
+| `GET` | `/students/search?query=<name>` | Case-insensitive name search via PostgreSQL `ILIKE` |
+| `GET` | `/students/{student_id}` | Get a specific student by ID |
+| `DELETE` | `/students/{student_id}` | Delete a student by ID |
+
+### Key Design Features
+
+- ➕ **Create Student** — auto-assigns next available ID; stores `name`, `age`, `city`
+- 📋 **List All Students** — ordered by ID; returns empty list if none exist
+- 🔍 **Case-Insensitive Search** — `ILIKE` pattern matching on name
+- 🎯 **Get by ID** — returns `404 Not Found` if student does not exist
+- ❌ **Delete by ID** — returns `404 Not Found` if student does not exist
+- 🌐 **Swagger UI** — interactive API docs auto-generated at `/docs`
+- 🔒 **Global Error Handler** — `ValueError` anywhere in the stack → clean HTTP `400 Bad Request`
+- ⚡ **Lifespan Management** — DB connects on startup, disconnects gracefully on shutdown
+- 💉 **Dependency Injection** — `DatabaseHelper → Repository → Service` wired via `Depends()`
+- 🔄 **Swappable Repository** — swap `PostgresStudentRepository` for any other backend with zero service-layer changes
+
+---
+
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| **Python 3.11+** | Core language |
+| **FastAPI** | REST API framework |
+| **Uvicorn** | ASGI server with hot-reload |
+| **Pydantic** | Request/response model validation |
+| **psycopg** | PostgreSQL database driver (v3) |
+| **PostgreSQL** | Relational database backend |
+
+---
+
+## 🚀 How to Run
+
+### Prerequisites
+
+1. Ensure **PostgreSQL** is running locally on port `5432`.
+2. Create the target database (or use an existing one):
+   ```sql
+   CREATE DATABASE student_db;
+   ```
+3. Install dependencies:
+   ```bash
+   pip install fastapi uvicorn psycopg pydantic
+   ```
+
+### Configuration
+
+The `DatabaseHelper` reads connection settings from **environment variables** (falling back to defaults):
+
+| Variable | Default | Description |
+|---|---|---|
+| `DB_NAME` | `student_db` | PostgreSQL database name |
+| `DB_USER` | `postgres` | PostgreSQL username |
+| `DB_PASSWORD` | `password@postgres` | PostgreSQL password |
+| `DB_HOST` | `localhost` | Database server host |
+| `DB_PORT` | `5432` | Database server port |
+
+### Start the Server
+
+```bash
+python app.py
+```
+
+The server starts at **`http://127.0.0.1:8000`** with hot-reload enabled.
+
+> **Note:** The `students` table is auto-created on first startup if it doesn't exist.
+
+### Access the API
+
+| URL | Description |
+|---|---|
+| `http://127.0.0.1:8000/docs` | Swagger UI (interactive API explorer) |
+| `http://127.0.0.1:8000/redoc` | ReDoc API documentation |
+| `http://127.0.0.1:8000/` | Root health check |
+
+---
+
+## 📖 Architectural Concepts
+
+### Why Dependency Injection?
+
+FastAPI's `Depends()` system is used to build a declarative injection chain:
+
+```
+get_db_helper() → get_student_repository() → get_student_service()
+```
+
+- **Decoupling**: Router has no knowledge of how `StudentService` or `DatabaseHelper` are created.
+- **Testability**: Override any provider in tests without touching production code.
+- **Single Responsibility**: Each class focuses on its own logic, not on wiring.
+
+### Why Abstract Repository?
+
+`StudentRepository` (ABC) enforces the **Dependency Inversion Principle**:
+- `StudentService` depends on the *interface*, not `PostgresStudentRepository`.
+- Swap storage backends (MongoDB, SQLite, in-memory) by only modifying `dependencies.py`.
+
+### Why a Lifespan Handler?
+
+The `@asynccontextmanager lifespan` in `main.py`:
+- **Startup**: Connects to PostgreSQL and verifies/creates the table schema once.
+- **Shutdown**: Closes the connection cleanly, preventing socket leaks.
+- **Efficiency**: A single persistent connection serves all incoming requests.
+
+### Why a Global `ValueError` Handler?
+
+Schema validation and business logic raise `ValueError` for bad inputs. Instead of wrapping every endpoint in `try/except`, a single global handler in `main.py` catches all `ValueError`s and returns a consistent `HTTP 400 Bad Request` JSON response.

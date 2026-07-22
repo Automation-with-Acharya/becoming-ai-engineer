@@ -1,6 +1,6 @@
 """
 Routers package initialization.
 """
-from routers.students import StudentRouter
+from routers.students import router
 
-__all__ = ["StudentRouter"]
+__all__ = ["router"]
