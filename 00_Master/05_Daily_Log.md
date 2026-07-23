@@ -664,3 +664,54 @@ Successfully transformed the Student Management application into a more producti
 - Continue refining the Student Management API toward production readiness.
 
 **Status:** ✅ Day 013 Successfully Completed
+
+---
+
+---
+
+# Day 014 — Thursday, 23 July 2026
+
+## Completed
+
+- Learned advanced Pydantic validation using `Field()`, validation constraints, Optional fields, default values, and Response Models.
+- Enhanced the Student Management project by introducing an `email` field across the application while preserving the existing Clean Architecture.
+- Improved request validation, response serialization, and API documentation through refined Pydantic models.
+- Updated the project structure, schemas, repository, service, and router layers without requiring major architectural changes.
+- Created the Day 014 Engineering Handbook and updated the GitHub repository with the latest validation and schema improvements.
+
+---
+
+## Lessons
+
+- Validation should occur before business logic to prevent invalid data from entering the application.
+- Separating Request and Response Models creates cleaner, safer, and more maintainable APIs.
+- Clean Architecture significantly reduces the effort required to evolve an application, as demonstrated by adding the new `email` field with minimal code changes.
+- Well-defined layers make feature enhancements predictable and localized instead of requiring widespread modifications.
+- Architecture delivers its real value when requirements change, not when the application is first written.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully strengthened the Student Management API with advanced validation and experienced the practical benefits of Clean Architecture through real feature evolution. The project continues to mature into a production-style backend with maintainable and extensible design.
+
+---
+
+## Tomorrow
+
+- Learn Authentication vs Authorization.
+- Implement password hashing using `passlib`.
+- Understand JWT (JSON Web Tokens) and secure API design.
+- Begin protecting API endpoints with authentication.
+
+**Status:** ✅ Day 014 Successfully Completed
