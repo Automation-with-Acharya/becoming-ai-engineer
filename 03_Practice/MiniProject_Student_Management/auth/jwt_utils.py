@@ -49,7 +49,7 @@ import base64
 # WARNING: This is for educational demonstration ONLY.
 # In production, load this from environment variables:
 #   import os; SECRET_KEY = os.environ["JWT_SECRET_KEY"]
-SECRET_KEY = "day015-super-secret-key-for-jwt-demo-practice-2024"
+SECRET_KEY = "day015-super-secret-key-for-jwt-demo-practice-2026"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

@@ -715,3 +715,54 @@ Successfully strengthened the Student Management API with advanced validation an
 - Begin protecting API endpoints with authentication.
 
 **Status:** ✅ Day 014 Successfully Completed
+
+---
+
+---
+
+# Day 015 — Friday, 24 July 2026
+
+## Completed
+
+- Learned Authentication, Authorization, JWT architecture, and password hashing with bcrypt.
+- Implemented JWT-based authentication, password hashing utilities, protected endpoints, and token verification in the Student Management project.
+- Explored the complete authentication flow, including login, token generation, validation, and protected API access.
+- Studied and experimented with AI-generated implementations, analyzed the architecture, modified portions of the code, and documented the concepts thoroughly.
+- Created the Day 015 Engineering Handbook and updated the GitHub repository with authentication and security enhancements.
+
+---
+
+## Lessons
+
+- Authentication verifies identity, while Authorization determines permissions.
+- Password hashing (bcrypt) and JWT solve different security problems and operate independently.
+- bcrypt uses a random salt for every hash while still supporting verification by storing the salt within the hash itself.
+- JWT signatures are created and verified using a shared secret (HS256) or public/private key pair (RS256), not password hashes.
+- Security features become much easier to understand when their architecture and responsibilities are analyzed rather than simply implemented.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~4 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully implemented and understood JWT authentication, password hashing, and protected endpoints. More importantly, developed a clear architectural understanding of how authentication flows through a backend application and how individual security components work together.
+
+---
+
+## Tomorrow
+
+- Learn FastAPI Middleware and the HTTP request/response lifecycle.
+- Understand how middleware intercepts every request before it reaches routers.
+- Implement custom middleware for request logging and timing.
+- Learn the fundamentals of CORS and why browsers enforce it.
+
+**Status:** ✅ Day 015 Successfully Completed
