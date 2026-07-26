@@ -18,9 +18,17 @@ Why is a lifespan handler required here?
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from routers.students import router as student_router
 from routers.auth import router as auth_router
 from dependencies import get_db_helper
+from middleware.request_middleware import (
+    LogIncomingRequestMiddleware,
+    ExecutionTimeMiddleware,
+    ConsoleRequestLogMiddleware,
+    MiddlewareOrderDemoA,
+    MiddlewareOrderDemoB,
+)
 
 
 
@@ -53,6 +61,12 @@ app = FastAPI(
     description=(
         "A FastAPI-based REST API demonstrating Clean Architecture, Dependency Injection, "
         "and proper HTTP error handling.\n\n"
+        "## Day 016: Middleware Practice\n"
+        "- **Exercise 1** — Log incoming request method + path (console)\n"
+        "- **Exercise 2** — Execution time measurement + `X-Process-Time-Ms` response header\n"
+        "- **Exercise 3** — Completed-request console logging (`METHOD /path -> STATUS`)\n"
+        "- **Exercise 4** — CORS enabled for `http://localhost:5173`\n"
+        "- **Exercise 5** — Two-middleware order demo (observe LIFO pipeline)\n\n"
         "## Day 015: JWT Authentication\n"
         "- **Exercise 1** — Password hashing with `passlib` bcrypt → `GET /auth/demo/hash`\n"
         "- **Exercise 2** — JWT generation (username, role, expiration) → `POST /auth/login`\n"
@@ -61,9 +75,39 @@ app = FastAPI(
         "- **Exercise 5** — Swagger testing (no token / invalid / expired / valid)\n\n"
         "**Demo credentials:** `admin/admin123` · `alice/student456` · `bob/teacher789`"
     ),
-    version="2.0.0",
+    version="3.0.0",
     lifespan=lifespan
 )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Day 016 Middleware Registration
+# ──────────────────────────────────────────────────────────────────────────────
+# NOTE: FastAPI processes middleware in LIFO (Last In, First Out) order.
+# The last middleware added here runs FIRST on incoming requests.
+# Reading the list top-to-bottom = order of response unwinding (outermost last).
+
+# Exercise 4 — CORS: allow requests from the Vite dev-server origin.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Exercise 5 — Middleware Order Demo: A registered before B, but B runs first.
+app.add_middleware(MiddlewareOrderDemoA)  # outermost — sees request last, response first
+app.add_middleware(MiddlewareOrderDemoB)  # runs after A on request; response unwinds to A
+
+# Exercise 1 — Log incoming request method + path.
+app.add_middleware(LogIncomingRequestMiddleware)
+
+# Exercise 2 — Measure execution time and attach X-Process-Time-Ms header.
+app.add_middleware(ExecutionTimeMiddleware)
+
+# Exercise 3 — One-line console log after each completed request.
+app.add_middleware(ConsoleRequestLogMiddleware)
 
 # Register routers.
 app.include_router(student_router)
