@@ -817,3 +817,54 @@ Successfully implemented and understood FastAPI Middleware, request lifecycle, a
 - Begin building a professional debugging and observability workflow.
 
 **Status:** ✅ Day 016 Successfully Completed
+
+---
+
+---
+
+# Day 017 — Tuesday, 28 July 2026
+
+## Completed
+
+- Learned Python's `logging` module, structured logging, log levels, and production debugging concepts.
+- Configured centralized logging using a dedicated `logger_config.py` with reusable loggers across the application.
+- Implemented console and file logging, replaced existing `print()` statements with structured logger calls, and added exception logging using `logger.exception()`.
+- Integrated logging throughout the Student Management project while preserving the existing Clean Architecture and middleware pipeline.
+- Created the Day 017 Engineering Handbook and updated the GitHub repository, project documentation, and version history with the new logging architecture.
+
+---
+
+## Lessons
+
+- Logging is an observability tool that records application activity and significantly improves debugging and production support.
+- Structured logging is superior to `print()` because it provides timestamps, severity levels, persistent storage, and searchable records.
+- Different log levels communicate the importance of events and help filter application behavior during development and production.
+- `logger.exception()` automatically captures stack traces, making it much easier to identify the root cause of failures.
+- Centralizing logging configuration keeps the application consistent, maintainable, and ready for future monitoring integrations.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully implemented and understood structured logging across the application. The backend now has a centralized logging strategy that improves debugging, observability, and maintainability while aligning with production-grade engineering practices.
+
+---
+
+## Tomorrow
+
+- Learn Global Exception Handling in FastAPI.
+- Create custom exception classes and centralized error handlers.
+- Build consistent API error responses across the application.
+- Integrate exception handling with the existing logging infrastructure for production-style error management.
+
+**Status:** ✅ Day 017 Successfully Completed
