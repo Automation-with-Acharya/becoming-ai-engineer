@@ -17,12 +17,17 @@ Request vs. Response Models:
 -----------------------------
 - Student_model          : Used for REQUEST bodies (client → server). 'id' is optional/None.
 - Student_response_model : Used for RESPONSE bodies (server → client). 'id' is always a required int.
+
+Day 017 Update: Structured logging added for all route handlers and exception paths.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.student import Student_model, Student_response_model
 from services.student_service import StudentService
 from dependencies import get_student_service
+from logger_config import get_logger
+
+logger = get_logger(__name__)
 
 # Initialize the router. We prefix all endpoints with '/students' to group related actions together.
 router = APIRouter(
@@ -59,15 +64,21 @@ def create_student(
         - 400 Bad Request: Raised via global exception handlers if student name validation fails.
         - 500 Internal Server Error: Raised if database insert fails.
     """
+    logger.info(
+        "Router: POST /students — name='%s', age=%s, city='%s'",
+        student_data.name, student_data.age, student_data.city,
+    )
     # Delegate name validation and insertion to service layer.
     # Any ValueError raised by validation will propagate and be caught by the global
     # exception handler in main.py, producing a consistent HTTP 400 response.
-    return service.add_student(
+    result = service.add_student(
         name=student_data.name,
         age=student_data.age,
         city=student_data.city,
         email=student_data.email
     )
+    logger.info("Router: Student created — id=%d, name='%s'", result.id, result.name)
+    return result
 
 
 @router.get(
@@ -91,7 +102,10 @@ def get_all_students(
     Returns:
         list[Student_response_model]: A list of all students. Returns empty list if none registered.
     """
-    return service.get_all_students()
+    logger.info("Router: GET /students — retrieving all students.")
+    result = service.get_all_students()
+    logger.info("Router: Returning %d student(s).", len(result))
+    return result
 
 
 @router.get(
@@ -117,7 +131,10 @@ def search_students(
     Returns:
         list[Student_response_model]: List of students matching the search query.
     """
-    return service.search_students(query)
+    logger.info("Router: GET /students/search — query='%s'", query)
+    result = service.search_students(query)
+    logger.info("Router: Search returned %d match(es).", len(result))
+    return result
 
 
 @router.get(
@@ -146,12 +163,15 @@ def get_student_by_id(
     HTTP Error Handling:
         - 404 Not Found: Raised if a student with the given ID does not exist in the database.
     """
+    logger.info("Router: GET /students/%d", student_id)
     student = service.get_student_by_id(student_id)
     if student is None:
+        logger.warning("Router: Student id=%d not found — returning 404.", student_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Student with ID {student_id} not found."
         )
+    logger.info("Router: Returning student id=%d, name='%s'.", student.id, student.name)
     return student
 
 
@@ -181,10 +201,13 @@ def delete_student(
     HTTP Error Handling:
         - 404 Not Found: Raised if a student with the given ID does not exist.
     """
+    logger.info("Router: DELETE /students/%d", student_id)
     deleted = service.delete_student(student_id)
     if not deleted:
+        logger.warning("Router: Delete failed — student id=%d not found — returning 404.", student_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Student with ID {student_id} not found. Deletion failed."
         )
+    logger.info("Router: Student id=%d deleted successfully.", student_id)
     return {"message": f"Student with ID {student_id} deleted successfully."}

@@ -16,6 +16,8 @@ GET  /auth/demo/hash          — Demo: hash a password and verify it (Exercise 
 GET  /auth/demo/token         — Demo: generate and inspect a JWT (Exercises 2 & 3).
 POST /auth/inspect-token      — Manually inspect any JWT's Header/Payload/Signature.
 GET  /profile                 — Protected endpoint. Requires valid Bearer token.
+
+Day 017 Update: Structured logging added for all auth operations.
 """
 
 from datetime import datetime, timezone
@@ -26,7 +28,9 @@ from pydantic import BaseModel
 from auth.password_utils import hash_password, verify_password
 from auth.jwt_utils import create_access_token, decode_token, inspect_token_parts
 from auth.jwt_bearer import get_current_user
+from logger_config import get_logger
 
+logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -177,8 +181,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     - 401 Unauthorized: Wrong password.
     """
 
+    logger.info("Auth: Login attempt — username='%s'", form_data.username)
+
     user = FAKE_USERS_DB.get(form_data.username)
     if user is None:
+        logger.warning("Auth: Login failed — unknown username='%s'", form_data.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username.",
@@ -187,6 +194,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
     # Step 1: Verify password (Exercise 1 — bcrypt verification)
     if not verify_password(form_data.password, user["hashed_password"]):
+        logger.warning("Auth: Login failed — wrong password for username='%s'", form_data.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password.",
@@ -199,6 +207,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         role=user["role"]
     )
 
+    logger.info(
+        "Auth: Login successful — username='%s', role='%s', token issued.",
+        user["username"], user["role"],
+    )
     return TokenResponse(
         access_token=token,
         token_type="bearer",
@@ -286,8 +298,10 @@ def inspect_token(request: InspectTokenRequest):
     - Paste an expired token to see that the payload is still readable (but invalid).
     - Manually modify a token and paste it to see what happens to the structure.
     """
+    logger.debug("Auth: inspect-token called.")
     try:
         parts = inspect_token_parts(request.token)
+        logger.debug("Auth: Token inspection succeeded.")
         return {
             "exercise": "Exercise 3: JWT Decoding",
             "decoded_header": parts["header"],
@@ -303,6 +317,8 @@ def inspect_token(request: InspectTokenRequest):
             )
         }
     except ValueError as exc:
+        # Exercise 4: Log the exception so the stack trace is visible in the file
+        logger.warning("Auth: inspect-token failed — %s", str(exc))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc)
@@ -364,14 +380,18 @@ def get_profile(current_user: dict = Depends(get_current_user)):
         → Response: 200 with full profile data.
     """
     # Extract claims from the verified JWT payload
+    username = current_user.get("username")
+    role = current_user.get("role")
     exp_timestamp = current_user.get("exp")
     iat_timestamp = current_user.get("iat")
+
+    logger.info("Auth: Profile accessed — username='%s', role='%s'", username, role)
 
     return {
         "message": "Access granted! You are authenticated.",
         "profile": {
-            "username": current_user.get("username"),
-            "role": current_user.get("role"),
+            "username": username,
+            "role": role,
             "subject": current_user.get("sub"),
         },
         "token_metadata": {
@@ -385,9 +405,9 @@ def get_profile(current_user: dict = Depends(get_current_user)):
             ),
         },
         "access_level": {
-            "admin": current_user.get("role") == "admin",
-            "can_manage_students": current_user.get("role") in ["admin", "teacher"],
-            "read_only": current_user.get("role") == "student",
+            "admin": role == "admin",
+            "can_manage_students": role in ["admin", "teacher"],
+            "read_only": role == "student",
         },
         "exercise_note": (
             "This data was extracted entirely from the JWT payload — "

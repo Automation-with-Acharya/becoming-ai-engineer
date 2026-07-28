@@ -2,10 +2,17 @@
 Database Helper Module.
 
 This module manages PostgreSQL database connections and SQL query executions using psycopg library.
+
+Day 017 Update: All print() statements replaced with structured logger calls.
+Exception logging via logger.exception() inside try/except blocks to capture full stack traces.
 """
 
 import os
 import psycopg
+
+from logger_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class DatabaseHelper:
@@ -34,6 +41,10 @@ class DatabaseHelper:
         self.host = host or os.getenv("DB_HOST", "localhost")
         self.port = port or os.getenv("DB_PORT", "5432")
         self.connection = None
+        logger.debug(
+            "DatabaseHelper initialized — host=%s, port=%s, db=%s, user=%s",
+            self.host, self.port, self.dbname, self.user,
+        )
 
     def connect(self):
         """
@@ -41,24 +52,41 @@ class DatabaseHelper:
 
         Returns:
             psycopg.Connection: Active database connection instance.
+
+        Raises:
+            psycopg.OperationalError: If connection to PostgreSQL fails.
         """
         if self.connection is None:
-            self.connection = psycopg.connect(
-                dbname=self.dbname,
-                user=self.user,
-                password=self.password,
-                host=self.host,
-                port=self.port,
-            )
-            # Ensure the students table exists with all required columns
-            self._create_table_if_not_exists()
+            try:
+                logger.debug(
+                    "Opening PostgreSQL connection to %s:%s/%s...",
+                    self.host, self.port, self.dbname,
+                )
+                self.connection = psycopg.connect(
+                    dbname=self.dbname,
+                    user=self.user,
+                    password=self.password,
+                    host=self.host,
+                    port=self.port,
+                )
+                # Ensure the students table exists with all required columns
+                self._create_table_if_not_exists()
+                logger.info("PostgreSQL connection established and schema verified.")
+            except Exception:
+                # Exercise 4: logger.exception() captures the full stack trace in the log file
+                logger.exception(
+                    "Failed to connect to PostgreSQL at %s:%s/%s",
+                    self.host, self.port, self.dbname,
+                )
+                raise
         return self.connection
 
     def _create_table_if_not_exists(self):
         """
         Create the 'students' table if it does not already exist in PostgreSQL.
-        Includes all columns: id, name, age, city.
+        Includes all columns: id, name, age, city, email.
         """
+        logger.debug("Checking/creating 'students' table schema...")
         with self.connection.cursor() as cur:
             # We add 'age' and 'city' columns to the create statement.
             # In the original CLI version, the table only had id and name, but the models
@@ -75,6 +103,7 @@ class DatabaseHelper:
                 """
             )
         self.connection.commit()
+        logger.debug("'students' table is ready.")
 
     def execute_query(self, query, params=None, commit=False):
         """
@@ -87,18 +116,28 @@ class DatabaseHelper:
 
         Returns:
             list | None: Query results if rows exist, otherwise None.
+
+        Raises:
+            Exception: Re-raises any psycopg database error after logging it.
         """
         if self.connection is None:
             self.connect()
 
-        with self.connection.cursor() as cur:
-            cur.execute(query, params)
-            result = cur.fetchall() if cur.description else None
+        try:
+            with self.connection.cursor() as cur:
+                cur.execute(query, params)
+                result = cur.fetchall() if cur.description else None
 
-        if commit:
-            self.connection.commit()
+            if commit:
+                self.connection.commit()
 
-        return result
+            logger.debug("Query executed successfully: %.80s", query.strip())
+            return result
+
+        except Exception:
+            # Exercise 4: Log exception with full stack trace for any DB query failure
+            logger.exception("Database query failed. Query: %.80s", query.strip())
+            raise
 
     def fetch_all(self, query, params=None):
         """
@@ -132,5 +171,9 @@ class DatabaseHelper:
         Close the PostgreSQL database connection to free resources.
         """
         if self.connection is not None:
-            self.connection.close()
-            self.connection = None
+            try:
+                self.connection.close()
+                self.connection = None
+                logger.info("PostgreSQL connection closed successfully.")
+            except Exception:
+                logger.exception("Error occurred while closing the PostgreSQL connection.")

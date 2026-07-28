@@ -4,6 +4,96 @@ Full changelog for every version of this project: **what** changed, **why** it w
 
 ---
 
+## v11 — Day 017: Python Logging Practice
+
+**When:** Day 017  
+**Theme:** Observability — structured logging with FileHandler, StreamHandler, and Formatter across all application layers
+
+### What Changed
+
+| Area | Before (v10) | After (v11) |
+|---|---|---|
+| **Logging** | `print()` statements scattered across `main.py`, `middleware/` | Centralized `logging` module with `Logger`, `FileHandler`, `StreamHandler`, `Formatter` |
+| **Log Config** | Not present | `logger_config.py` — single module wires the entire logging pipeline |
+| **Log File** | Not present | `logs/application.log` — all `DEBUG`+ records written here persistently |
+| **Console Output** | Raw `print()` text | Structured `INFO`+ records with timestamp, level, module, and message |
+| **Exception Logging** | No stack traces captured | `logger.exception()` inside every `try/except` captures full Python stack traces |
+| **Log Levels** | None (print = always visible) | `DEBUG` (file-only trace), `INFO` (operations), `WARNING` (missing resources, auth fails), `ERROR`/`EXCEPTION` (server errors) |
+| **Middleware** | `print()` in every middleware class | `logger.info()` for requests; `logger.debug()` for timing & LIFO demo; `logger.warning/error()` for 4xx/5xx |
+| **Repository** | No observability | `logger.info()` on CRUD success; `logger.warning()` for not-found; `logger.exception()` on DB failure |
+| **Service** | No observability | `logger.info()` for method entry/exit; `logger.warning()` for validation failures and not-found |
+| **Router** | No observability | `logger.info()` for route entry/result; `logger.warning()` before 404 raises |
+| **Auth Router** | No observability | `logger.info()` for login success; `logger.warning()` for wrong credentials; `logger.debug()` for token ops |
+| **JWT Bearer** | No observability | `logger.warning()` on validation failure; `logger.debug()` on success |
+| **DB Helper** | No observability | `logger.info()` for connect/close; `logger.debug()` for query traces; `logger.exception()` on failure |
+| **App Version** | `3.0.0` | `4.0.0` |
+
+### Why
+
+Application logs are the primary tool for diagnosing production issues. Without structured logging:
+- There is no persistent record of what happened when an error occurs.
+- `print()` has no severity level — you can't distinguish a debug trace from a critical failure.
+- Stack traces disappear after the terminal session ends.
+
+Python's `logging` module solves all three problems: it supports severity levels, persistent file output, consistent formatting, and automatic stack trace capture via `logger.exception()`.
+
+### How (Five Exercises)
+
+| Exercise | What | Implementation |
+|---|---|---|
+| **Ex 1** | Configure logging | `logging.Logger` + manual `FileHandler` + `StreamHandler` + `Formatter` in `logger_config.py` (replaces `basicConfig` for finer control) |
+| **Ex 2** | Write logs to `logs/application.log` | `FileHandler(LOG_FILE, mode="a")` at `DEBUG` level — captures everything including trace details invisible on console |
+| **Ex 3** | Replace `print()` with logger calls | Every module: `logger.info()` for normal ops, `logger.warning()` for user/auth errors, `logger.error()` for server errors |
+| **Ex 4** | Log exceptions | `logger.exception("...")` inside every `try/except` — automatically appends the full traceback to the log file |
+| **Ex 5** | Review output | Console shows `INFO`+ only; `logs/application.log` shows everything including `DEBUG` traces and stack traces |
+
+### Key Concept: Logger Hierarchy
+
+All loggers use the naming convention `student_management.<module>`:
+
+```text
+student_management                   ← root app logger (configured in logger_config.py)
+├── student_management.main
+├── student_management.middleware.request_middleware
+├── student_management.routers.students
+├── student_management.routers.auth
+├── student_management.services.student_service
+├── student_management.repositories.student_repository
+├── student_management.database.database_helper
+└── student_management.auth.jwt_bearer
+```
+
+Child loggers inherit both handlers from the parent. Calling `get_logger(__name__)` in each module automatically produces the correct name.
+
+### Log Level Strategy
+
+| Level | When Used | Visible |
+|---|---|---|
+| `DEBUG` | Query traces, LIFO demo steps, token validation success | File only |
+| `INFO` | Startup, shutdown, CRUD success, request/response summary | Console + File |
+| `WARNING` | Record not found, auth failures, validation errors (user errors) | Console + File |
+| `ERROR` | 5xx response status codes | Console + File |
+| `EXCEPTION` | Any `except` block — wraps ERROR with full stack trace | Console + File |
+
+### Where
+
+```
+logger_config.py                ← NEW: root logger, FileHandler, StreamHandler, Formatter, get_logger()
+logs/
+└── application.log             ← AUTO-CREATED: persistent log output (DEBUG+)
+
+main.py                         ← lifespan startup/shutdown now uses logger; exception on DB fail
+middleware/request_middleware.py ← all print() replaced; level varies by HTTP status
+database/database_helper.py     ← connect/close/execute all logged; try/except with logger.exception()
+repositories/student_repository.py ← full CRUD observability; logger.exception() on every failure
+services/student_service.py     ← method entry/exit logged; warning on validation errors
+routers/students.py             ← route entry/result logged; warning before 404
+routers/auth.py                 ← login attempts/failures logged; profile access logged
+auth/jwt_bearer.py              ← JWT validation success/failure logged
+```
+
+---
+
 ## v10 — Day 016: Middleware Practice
 
 **When:** Day 016  

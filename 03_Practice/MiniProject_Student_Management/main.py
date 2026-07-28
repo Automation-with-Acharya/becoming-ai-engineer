@@ -25,11 +25,13 @@ from dependencies import get_db_helper
 from middleware.request_middleware import (
     LogIncomingRequestMiddleware,
     ExecutionTimeMiddleware,
-    ConsoleRequestLogMiddleware,
-    MiddlewareOrderDemoA,
-    MiddlewareOrderDemoB,
+    ConsoleRequestLogMiddleware
 )
 
+# ── Exercise 1–5: Import the central logger (configures FileHandler + StreamHandler)
+from logger_config import get_logger
+
+logger = get_logger(__name__)
 
 
 # Define the lifespan context manager to coordinate application startup and shutdown events.
@@ -42,40 +44,36 @@ async def lifespan(app: FastAPI):
     # ------------------ STARTUP ------------------
     # Retrieve the database helper dependency and establish connection
     db_helper = get_db_helper()
-    print("[Lifespan Startup] Connecting to PostgreSQL...")
-    db_helper.connect()
-    print("[Lifespan Startup] Connected and verified table schemas successfully.")
-    
+    logger.info("[Lifespan Startup] Connecting to PostgreSQL...")
+    try:
+        db_helper.connect()
+        logger.info("[Lifespan Startup] Connected and verified table schemas successfully.")
+    except Exception:
+        # Exercise 4: logger.exception() records the full stack trace automatically
+        logger.exception("[Lifespan Startup] FAILED to connect to PostgreSQL database.")
+        raise  # Re-raise so FastAPI aborts startup
+
     yield  # Hand over control to the FastAPI application execution
-    
+
     # ------------------ SHUTDOWN ------------------
     # Safely close connection when the server is stopped
-    print("[Lifespan Shutdown] Closing database connections...")
-    db_helper.close()
-    print("[Lifespan Shutdown] PostgreSQL connection closed.")
+    logger.info("[Lifespan Shutdown] Closing database connections...")
+    try:
+        db_helper.close()
+        logger.info("[Lifespan Shutdown] PostgreSQL connection closed.")
+    except Exception:
+        logger.exception("[Lifespan Shutdown] Error occurred while closing the database connection.")
 
 
 # Instantiate the FastAPI application with custom metadata and lifespan hook.
 app = FastAPI(
     title="Student Management REST API",
     description=(
-        "A FastAPI-based REST API demonstrating Clean Architecture, Dependency Injection, "
-        "and proper HTTP error handling.\n\n"
-        "## Day 016: Middleware Practice\n"
-        "- **Exercise 1** — Log incoming request method + path (console)\n"
-        "- **Exercise 2** — Execution time measurement + `X-Process-Time-Ms` response header\n"
-        "- **Exercise 3** — Completed-request console logging (`METHOD /path -> STATUS`)\n"
-        "- **Exercise 4** — CORS enabled for `http://localhost:5173`\n"
-        "- **Exercise 5** — Two-middleware order demo (observe LIFO pipeline)\n\n"
-        "## Day 015: JWT Authentication\n"
-        "- **Exercise 1** — Password hashing with `passlib` bcrypt → `GET /auth/demo/hash`\n"
-        "- **Exercise 2** — JWT generation (username, role, expiration) → `POST /auth/login`\n"
-        "- **Exercise 3** — JWT inspection (Header/Payload/Signature) → `POST /auth/inspect-token`\n"
-        "- **Exercise 4** — Protected endpoint → `GET /auth/profile`\n"
-        "- **Exercise 5** — Swagger testing (no token / invalid / expired / valid)\n\n"
+        "A FastAPI-based REST API demonstrating Clean Architecture, Dependency Injection, proper HTTP error handling, JWT authentication, Middleware implementation and application-wide logging.\n\n"
+        
         "**Demo credentials:** `admin/admin123` · `alice/student456` · `bob/teacher789`"
     ),
-    version="3.0.0",
+    version="4.0.0",
     lifespan=lifespan
 )
 
@@ -96,10 +94,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Exercise 5 — Middleware Order Demo: A registered before B, but B runs first.
-app.add_middleware(MiddlewareOrderDemoA)  # outermost — sees request last, response first
-app.add_middleware(MiddlewareOrderDemoB)  # runs after A on request; response unwinds to A
-
 # Exercise 1 — Log incoming request method + path.
 app.add_middleware(LogIncomingRequestMiddleware)
 
@@ -112,6 +106,8 @@ app.add_middleware(ConsoleRequestLogMiddleware)
 # Register routers.
 app.include_router(student_router)
 app.include_router(auth_router)
+
+logger.info("FastAPI application initialised — routers and middleware registered.")
 
 
 # ----------------------------------------------------
@@ -131,7 +127,13 @@ async def value_error_exception_handler(request: Request, exc: ValueError):
     catches all ValueErrors thrown anywhere in the request context and formats them into a clean,
     standardized HTTP 400 Bad Request JSON response for the API client.
     """
-    print(f"[Exception Handled] ValueError occurred during API request: {str(exc)}")
+    # Exercise 3: Replace print() with logger.warning() for handled validation errors
+    logger.warning(
+        "[Exception Handled] ValueError on %s %s — %s",
+        request.method,
+        request.url.path,
+        str(exc),
+    )
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
@@ -141,10 +143,6 @@ async def value_error_exception_handler(request: Request, exc: ValueError):
         }
     )
 
-
-# from fastapi import Depends
-# from fastapi.security import OAuth2PasswordBearer
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 @app.get(
     "/",
@@ -156,6 +154,7 @@ def read_root():
     """
     Root API endpoint providing basic app metadata and access information.
     """
+    logger.debug("Root endpoint accessed.")
     return {
         "message": "Welcome to the Student Management REST API!",
         "documentation": "/docs",

@@ -28,6 +28,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from auth.jwt_utils import decode_token
+from logger_config import get_logger
+
+logger = get_logger(__name__)
+
 
 # OAuth2PasswordBearer tells FastAPI that:
 #   - The token is obtained from the endpoint at `tokenUrl`
@@ -81,10 +85,13 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
         # Ensure the token contains a subject claim
         username: str = payload.get("sub")
         if username is None:
+            logger.warning("JWT Bearer: Token missing 'sub' claim — rejecting request.")
             raise credentials_exception
 
+        logger.debug("JWT Bearer: Token validated successfully for username='%s'.", username)
         return payload  # Contains: sub, username, role, exp, iat
 
-    except JWTError:
+    except JWTError as exc:
         # Covers: invalid signature, expired token, malformed JWT structure
+        logger.warning("JWT Bearer: Token validation failed — %s", str(exc))
         raise credentials_exception

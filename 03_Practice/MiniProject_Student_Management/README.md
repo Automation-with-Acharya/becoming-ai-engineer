@@ -14,6 +14,10 @@ MiniProject_Student_Management/
 ├── app.py                          # Uvicorn runner: launches the FastAPI server with hot-reload
 ├── main.py                         # FastAPI app: lifespan hooks, middleware, routers, error handlers
 ├── dependencies.py                 # DI module: wires DatabaseHelper → Repository → Service
+├── logger_config.py                # Logging config: central Logger, FileHandler, StreamHandler, Formatter
+│
+├── logs/                           # Auto-created log output directory (Day 017)
+│   └── application.log             # All application log records (DEBUG+) written here
 │
 ├── middleware/                     # HTTP Middleware (Day 016)
 │   ├── __init__.py
@@ -91,6 +95,7 @@ HTTP Request
 
 | Layer | File | Responsibility |
 |---|---|---|
+| **Logging Config** | `logger_config.py` | Configures `student_management` root logger — `FileHandler` (DEBUG → `logs/application.log`) + `StreamHandler` (INFO → console) + shared `Formatter`; exposes `get_logger()` |
 | **Middleware** | `middleware/request_middleware.py` | Request logging, execution timing, console logging, CORS, order demo |
 | **Model** | `models/student.py` | Two Pydantic models: `Student_model` (request body) and `Student_response_model` (response body) |
 | **Schema** | `schemas/student_schema.py` | Validates & sanitizes raw user input (e.g. non-empty name) |
@@ -160,12 +165,20 @@ HTTP Request
 - 🔐 **Password Hashing** — bcrypt via `passlib`; constant-time verification prevents timing attacks
 - 🧪 **Auth Demo Endpoints** — educational endpoints to explore hashing, token structure, and Swagger Bearer auth
 
+**Logging (Day 017)**
+- 📋 **Centralized Logger** — `logger_config.py` sets up the `student_management` root logger with `FileHandler` + `StreamHandler` + shared `Formatter`
+- 📄 **File Logging** — All records (`DEBUG` and above) written to `logs/application.log`; console shows `INFO` and above only
+- 🔁 **Structured Log Levels** — `DEBUG` for trace details, `INFO` for operations, `WARNING` for missing resources & auth failures, `ERROR`/`EXCEPTION` for server errors
+- 🧩 **Exception Logging** — `logger.exception()` inside every `try/except` block captures full Python stack traces in the log file
+- 🔌 **Consistent Format** — All log lines share the format: `timestamp | LEVEL | module.name | message`
+- ♻️ **Zero `print()` Statements** — Every `print()` across all layers replaced with appropriate logger calls
+
 **Middleware**
-- 📝 **Request Logging** — prints `Incoming Request: METHOD /path` on every request
-- ⏱️ **Execution Time** — measures round-trip ms; adds `X-Process-Time-Ms` response header
-- 🖥️ **Console Logging** — prints `METHOD /path -> STATUS` after each request completes
+- 📝 **Request Logging** — logs `Incoming Request: METHOD /path` on every request (`logger.info()`)
+- ⏱️ **Execution Time** — measures round-trip ms; adds `X-Process-Time-Ms` response header; timing logged at `DEBUG` level
+- 🖥️ **Console Logging** — logs `METHOD /path -> STATUS` after each request; level varies by status code (INFO/WARNING/ERROR)
 - 🌍 **CORS** — `http://localhost:5173` allowed; all methods & headers
-- 🔀 **Middleware Order Demo** — two sequential middleware (A & B) show LIFO pipeline execution
+- 🔀 **Middleware Order Demo** — two sequential middleware (A & B) show LIFO pipeline execution; steps logged at `DEBUG` level
 
 ---
 
@@ -182,6 +195,7 @@ HTTP Request
 | **PostgreSQL** | Relational database backend |
 | **python-jose** | JWT generation, signing (HS256), and decoding |
 | **passlib[bcrypt]** | Secure password hashing with bcrypt + `CryptContext` abstraction |
+| **logging** (stdlib) | Python standard library logging — `Logger`, `FileHandler`, `StreamHandler`, `Formatter` |
 
 ---
 

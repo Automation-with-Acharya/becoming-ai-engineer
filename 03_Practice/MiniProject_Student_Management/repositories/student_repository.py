@@ -10,11 +10,16 @@ Return types use Student_response_model (not Student_model) because:
   - Student_response_model enforces id as a required int, accurately reflecting that guarantee.
   - Student_model (with id: int | None) is accepted as input (for add_student) because the
     caller (service layer) constructs it before the id is known.
+
+Day 017 Update: Structured logging added for all CRUD operations and exception paths.
 """
 
 from abc import ABC, abstractmethod
 from models.student import Student_model, Student_response_model
 from database.database_helper import DatabaseHelper
+from logger_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class StudentRepository(ABC):
@@ -121,21 +126,39 @@ class PostgresStudentRepository(StudentRepository):
 
         Returns:
             Student_response_model: Student object with the database-assigned id.
-        """
-        # Calculate next available ID
-        next_id_row = self.db_helper.fetch_one(
-            "SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM students"
-        )
-        assigned_id = next_id_row[0] if next_id_row else 1
 
-        # Insert student into database
-        self.db_helper.execute_query(
-            "INSERT INTO students (id, name, age, city, email) VALUES (%s, %s, %s, %s, %s)",
-            (assigned_id, student.name, student.age, student.city, student.email),
-            commit=True,
-        )
-        # Return a Student_response_model (id is now a required int — guaranteed by the DB insert)
-        return Student_response_model(id=assigned_id, name=student.name, age=student.age, city=student.city, email=student.email)
+        Raises:
+            Exception: Re-raises any database error after logging.
+        """
+        logger.info("Repository: Creating student — name='%s'", student.name)
+        try:
+            # Calculate next available ID
+            next_id_row = self.db_helper.fetch_one(
+                "SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM students"
+            )
+            assigned_id = next_id_row[0] if next_id_row else 1
+
+            # Insert student into database
+            self.db_helper.execute_query(
+                "INSERT INTO students (id, name, age, city, email) VALUES (%s, %s, %s, %s, %s)",
+                (assigned_id, student.name, student.age, student.city, student.email),
+                commit=True,
+            )
+            logger.info(
+                "Repository: Student created successfully — id=%d, name='%s'",
+                assigned_id, student.name,
+            )
+            # Return a Student_response_model (id is now a required int — guaranteed by the DB insert)
+            return Student_response_model(
+                id=assigned_id, name=student.name,
+                age=student.age, city=student.city, email=student.email,
+            )
+        except Exception:
+            # Exercise 4: Full stack trace captured in the log file
+            logger.exception(
+                "Repository: Failed to create student — name='%s'", student.name
+            )
+            raise
 
     def get_all_students(self) -> list[Student_response_model]:
         """
@@ -144,8 +167,17 @@ class PostgresStudentRepository(StudentRepository):
         Returns:
             list[Student_response_model]: List of Student response model objects.
         """
-        rows = self.db_helper.fetch_all("SELECT * FROM students ORDER BY id")
-        return [Student_response_model(id=row[0], name=row[1], age=row[2], city=row[3], email=row[4]) for row in rows]
+        logger.debug("Repository: Fetching all students.")
+        try:
+            rows = self.db_helper.fetch_all("SELECT * FROM students ORDER BY id")
+            logger.info("Repository: Retrieved %d student(s).", len(rows))
+            return [
+                Student_response_model(id=row[0], name=row[1], age=row[2], city=row[3], email=row[4])
+                for row in rows
+            ]
+        except Exception:
+            logger.exception("Repository: Failed to fetch all students.")
+            raise
 
     def get_student_by_id(self, student_id: int) -> Student_response_model | None:
         """
@@ -157,13 +189,20 @@ class PostgresStudentRepository(StudentRepository):
         Returns:
             Student_response_model | None: Student instance if found, otherwise None.
         """
-        row = self.db_helper.fetch_one(
-            "SELECT * FROM students WHERE id = %s",
-            (student_id,),
-        )
-        if row is None:
-            return None
-        return Student_response_model(id=row[0], name=row[1], age=row[2], city=row[3], email=row[4])
+        logger.debug("Repository: Looking up student with id=%d.", student_id)
+        try:
+            row = self.db_helper.fetch_one(
+                "SELECT * FROM students WHERE id = %s",
+                (student_id,),
+            )
+            if row is None:
+                logger.warning("Repository: Student with id=%d not found.", student_id)
+                return None
+            logger.debug("Repository: Found student id=%d, name='%s'.", row[0], row[1])
+            return Student_response_model(id=row[0], name=row[1], age=row[2], city=row[3], email=row[4])
+        except Exception:
+            logger.exception("Repository: Failed to fetch student with id=%d.", student_id)
+            raise
 
     def search_students(self, name_input: str) -> list[Student_response_model]:
         """
@@ -175,11 +214,22 @@ class PostgresStudentRepository(StudentRepository):
         Returns:
             list[Student_response_model]: List of matching Student response objects.
         """
-        rows = self.db_helper.fetch_all(
-            "SELECT * FROM students WHERE name ILIKE %s ORDER BY id",
-            (f"%{name_input}%",),
-        )
-        return [Student_response_model(id=row[0], name=row[1], age=row[2], city=row[3], email=row[4]) for row in rows]
+        logger.debug("Repository: Searching students with query='%s'.", name_input)
+        try:
+            rows = self.db_helper.fetch_all(
+                "SELECT * FROM students WHERE name ILIKE %s ORDER BY id",
+                (f"%{name_input}%",),
+            )
+            logger.info(
+                "Repository: Search '%s' returned %d result(s).", name_input, len(rows)
+            )
+            return [
+                Student_response_model(id=row[0], name=row[1], age=row[2], city=row[3], email=row[4])
+                for row in rows
+            ]
+        except Exception:
+            logger.exception("Repository: Failed to search students with query='%s'.", name_input)
+            raise
 
     def delete_student(self, student_id: int) -> bool:
         """
@@ -191,13 +241,22 @@ class PostgresStudentRepository(StudentRepository):
         Returns:
             bool: True if student was deleted, False if student not found.
         """
-        student = self.get_student_by_id(student_id)
-        if student is None:
-            return False
+        logger.info("Repository: Attempting to delete student with id=%d.", student_id)
+        try:
+            student = self.get_student_by_id(student_id)
+            if student is None:
+                logger.warning(
+                    "Repository: Delete failed — student with id=%d does not exist.", student_id
+                )
+                return False
 
-        self.db_helper.execute_query(
-            "DELETE FROM students WHERE id = %s",
-            (student_id,),
-            commit=True,
-        )
-        return True
+            self.db_helper.execute_query(
+                "DELETE FROM students WHERE id = %s",
+                (student_id,),
+                commit=True,
+            )
+            logger.info("Repository: Student id=%d deleted successfully.", student_id)
+            return True
+        except Exception:
+            logger.exception("Repository: Failed to delete student with id=%d.", student_id)
+            raise
