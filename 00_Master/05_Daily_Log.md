@@ -868,3 +868,54 @@ Successfully implemented and understood structured logging across the applicatio
 - Integrate exception handling with the existing logging infrastructure for production-style error management.
 
 **Status:** ✅ Day 017 Successfully Completed
+
+---
+
+---
+
+# Day 018 — Wednesday, 29 July 2026
+
+## Completed
+
+- Learned FastAPI global exception handling and the role of centralized error management in production applications.
+- Created custom domain exceptions and understood how they support Clean Architecture by keeping business logic independent of FastAPI.
+- Implemented global exception handlers to convert business exceptions into standardized HTTP JSON responses.
+- Integrated exception handling with the existing structured logging framework to improve debugging and observability.
+- Updated the Student Management project, completed all practical exercises, created the Day 018 Engineering Handbook, and pushed the changes to GitHub.
+
+---
+
+## Lessons
+
+- Business exceptions should be raised in the Service layer where business rules are enforced.
+- Repositories should focus only on data access and return data (or `None`) rather than making business decisions.
+- Global exception handlers centralize error handling and provide consistent API responses across the application.
+- Logging and exception handling complement each other by separating developer diagnostics from client-facing responses.
+- Clean Architecture keeps HTTP concerns, business logic, and data access responsibilities clearly separated.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~1.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully implemented global exception handling and understood the architectural responsibilities of each application layer. The backend now provides consistent error responses while preserving clean separation of concerns and production-ready debugging capabilities.
+
+---
+
+## Tomorrow
+
+- Learn Application Configuration Management.
+- Understand environment variables, `.env` files, and secure secret management.
+- Configure application settings using Pydantic Settings.
+- Refactor the Student Management project to remove hardcoded configuration values and prepare it for multiple deployment environments.
+
+**Status:** ✅ Day 018 Successfully Completed
