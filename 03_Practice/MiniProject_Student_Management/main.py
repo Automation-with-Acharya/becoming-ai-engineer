@@ -27,8 +27,9 @@ from middleware.request_middleware import (
     ExecutionTimeMiddleware,
     ConsoleRequestLogMiddleware
 )
+from exceptions import StudentNotFoundException
 
-# ── Exercise 1–5: Import the central logger (configures FileHandler + StreamHandler)
+# ── Day 017 Exercise 1–5: Import the central logger (configures FileHandler + StreamHandler)
 from logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -69,11 +70,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Student Management REST API",
     description=(
-        "A FastAPI-based REST API demonstrating Clean Architecture, Dependency Injection, proper HTTP error handling, JWT authentication, Middleware implementation and application-wide logging.\n\n"
+        "A FastAPI-based REST API demonstrating Clean Architecture, Dependency Injection, proper HTTP error handling, JWT authentication, Middleware implementation, application-wide logging, and Global Exception Handling.\n\n"
         
         "**Demo credentials:** `admin/admin123` · `alice/student456` · `bob/teacher789`"
     ),
-    version="4.0.0",
+    version="5.0.0",
     lifespan=lifespan
 )
 
@@ -127,7 +128,7 @@ async def value_error_exception_handler(request: Request, exc: ValueError):
     catches all ValueErrors thrown anywhere in the request context and formats them into a clean,
     standardized HTTP 400 Bad Request JSON response for the API client.
     """
-    # Exercise 3: Replace print() with logger.warning() for handled validation errors
+    # Day 017 Exercise 3: Replace print() with logger.warning() for handled validation errors
     logger.warning(
         "[Exception Handled] ValueError on %s %s — %s",
         request.method,
@@ -140,6 +141,77 @@ async def value_error_exception_handler(request: Request, exc: ValueError):
             "error": "Bad Request",
             "message": str(exc),
             "detail": "The request payload failed schema validation checks."
+        }
+    )
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Day 018 Exercise 3 + 4: Global handler for StudentNotFoundException
+# ───────────────────────────────────────────────────────────────────────────────
+
+@app.exception_handler(StudentNotFoundException)
+async def student_not_found_exception_handler(request: Request, exc: StudentNotFoundException):
+    """
+    Day 018 Exercise 3: Global handler for StudentNotFoundException.
+
+    Why global instead of per-route?
+    --------------------------------
+    Every route that looks up or deletes a student would otherwise need its own try/except.
+    A single global handler keeps all route functions clean and ensures a consistent
+    404 JSON response shape across the entire API.
+
+    Day 018 Exercise 4: Logs the exception via the centralized logger (WARNING level,
+    because a missing student is a client error, not a server fault).
+    """
+    # Day 018 Exercise 4: Log via centralized logger (not print!)
+    logger.warning(
+        "[Exception Handled] StudentNotFoundException on %s %s — student_id=%d",
+        request.method,
+        request.url.path,
+        exc.student_id,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={
+            "error": "Not Found",
+            "message": str(exc),          # e.g. "Student with ID 42 not found."
+            "student_id": exc.student_id,
+        }
+    )
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Day 018: Catch-all fallback for any other unhandled exception
+# ───────────────────────────────────────────────────────────────────────────────
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Day 018: Catch-all global exception handler.
+
+    Catches any exception that was NOT already handled by a more specific handler above.
+    Instead of the client receiving a raw FastAPI/Starlette 500 HTML error page, they get
+    a consistent, informative JSON response.  The full exception detail is logged server-side
+    for diagnosis but is NOT exposed to the client (security best practice).
+
+    IMPORTANT: More-specific handlers (ValueError, StudentNotFoundException) registered above
+    take precedence over this handler for their respective exception types.  Python/FastAPI
+    evaluates handlers from most-specific to least-specific.
+    """
+    # Day 018 Exercise 4: logger.exception() captures the full stack trace in the log file
+    logger.exception(
+        "[Unhandled Exception] %s on %s %s — %s",
+        type(exc).__name__,
+        request.method,
+        request.url.path,
+        str(exc),
+    )
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred. Please try again later.",
+            "exception_type": type(exc).__name__,  # class name aids debugging without leaking internals
         }
     )
 

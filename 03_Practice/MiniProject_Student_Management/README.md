@@ -16,6 +16,10 @@ MiniProject_Student_Management/
 ├── dependencies.py                 # DI module: wires DatabaseHelper → Repository → Service
 ├── logger_config.py                # Logging config: central Logger, FileHandler, StreamHandler, Formatter
 │
+├── exceptions/                     # Custom exceptions package (Day 018)
+│   ├── __init__.py
+│   └── student_exceptions.py       # StudentNotFoundException — raised by service, caught by global handler
+│
 ├── logs/                           # Auto-created log output directory (Day 017)
 │   └── application.log             # All application log records (DEBUG+) written here
 │
@@ -96,19 +100,20 @@ HTTP Request
 | Layer | File | Responsibility |
 |---|---|---|
 | **Logging Config** | `logger_config.py` | Configures `student_management` root logger — `FileHandler` (DEBUG → `logs/application.log`) + `StreamHandler` (INFO → console) + shared `Formatter`; exposes `get_logger()` |
+| **Exceptions** | `exceptions/student_exceptions.py` | Custom domain exceptions (`StudentNotFoundException`) raised by the service layer and caught by global handlers in `main.py` |
 | **Middleware** | `middleware/request_middleware.py` | Request logging, execution timing, console logging, CORS, order demo |
 | **Model** | `models/student.py` | Two Pydantic models: `Student_model` (request body) and `Student_response_model` (response body) |
 | **Schema** | `schemas/student_schema.py` | Validates & sanitizes raw user input (e.g. non-empty name) |
 | **Database Helper** | `database/database_helper.py` | Manages connection lifecycle, executes raw SQL via `psycopg` |
 | **Repository** | `repositories/student_repository.py` | Abstracts storage; `PostgresStudentRepository` implements CRUD |
-| **Service** | `services/student_service.py` | Orchestrates validation + repository calls; pure business logic |
-| **Router** | `routers/students.py` | Maps HTTP endpoints to service operations; raises `HTTPException` |
+| **Service** | `services/student_service.py` | Orchestrates validation + repository calls; raises `StudentNotFoundException` for missing records |
+| **Router** | `routers/students.py` | Maps HTTP endpoints to service operations; no manual not-found checks needed |
 | **Auth Utils** | `auth/password_utils.py` | bcrypt password hashing (`hash_password`) and verification (`verify_password`) via `passlib` |
 | **JWT Utils** | `auth/jwt_utils.py` | JWT creation (`create_access_token`), decoding (`decode_token`), inspection (`inspect_token_parts`) |
 | **JWT Bearer** | `auth/jwt_bearer.py` | `get_current_user` FastAPI dependency; `OAuth2PasswordBearer` extraction + validation |
 | **Auth Router** | `routers/auth.py` | Login, demo hash, demo token, inspect-token, and protected profile endpoints |
 | **DI Module** | `dependencies.py` | Single-responsibility wiring via `Depends()` chain |
-| **Main App** | `main.py` | Bootstraps FastAPI, registers middleware + routers, defines lifespan & error handlers |
+| **Main App** | `main.py` | Bootstraps FastAPI, registers middleware + routers, defines lifespan & global exception handlers |
 | **Runner** | `app.py` | Launches Uvicorn server with hot-reload enabled |
 
 ---
@@ -154,10 +159,17 @@ HTTP Request
 
 **Infrastructure**
 - 🌐 **Swagger UI** — interactive API docs auto-generated at `/docs`
-- 🔒 **Global Error Handler** — `ValueError` anywhere in the stack → clean HTTP `400 Bad Request`
+- 🔒 **Global Error Handlers** — `ValueError` → HTTP `400`; `StudentNotFoundException` → HTTP `404`; catch-all `Exception` → HTTP `500` with structured JSON
 - ⚡ **Lifespan Management** — DB connects on startup, disconnects gracefully on shutdown
 - 💉 **Dependency Injection** — `DatabaseHelper → Repository → Service` wired via `Depends()`
 - 🔄 **Swappable Repository** — swap `PostgresStudentRepository` for any other backend with zero service-layer changes
+
+**Exception Handling (Day 018)**
+- 🎯 **Custom Exception** — `StudentNotFoundException` carries `student_id`; raised by service layer, keeping routers clean
+- 🌍 **Global Handler: 404** — `@app.exception_handler(StudentNotFoundException)` → consistent `{error, message, student_id}` JSON
+- 🛡️ **Global Handler: 400** — `@app.exception_handler(ValueError)` → consistent `{error, message, detail}` JSON
+- 🚨 **Global Handler: 500** — `@app.exception_handler(Exception)` catch-all → `{error, message, exception_type}` JSON; full stack trace logged server-side only
+- 📋 **Exception Logging** — all handlers log via centralized logger (`WARNING` for client errors, `EXCEPTION` for server errors)
 
 **Authentication**
 - 🔑 **JWT Authentication** — HS256 signed tokens with `sub`, `role`, `exp`, `iat` claims via `python-jose`
@@ -272,9 +284,13 @@ The `@asynccontextmanager lifespan` in `main.py`:
 - **Shutdown**: Closes the connection cleanly, preventing socket leaks.
 - **Efficiency**: A single persistent connection serves all incoming requests.
 
-### Why a Global `ValueError` Handler?
+### Why a Global Exception Handler?
 
-Schema validation and business logic raise `ValueError` for bad inputs. Instead of wrapping every endpoint in `try/except`, a single global handler in `main.py` catches all `ValueError`s and returns a consistent `HTTP 400 Bad Request` JSON response.
+Instead of scattering `try/except` blocks inside every route function, a global handler in `main.py` catches each exception type at a single point and returns a consistent, structured JSON response.
+
+- **`StudentNotFoundException`** → HTTP 404 with `{error, message, student_id}` — raised by the service layer, never by the router
+- **`ValueError`** → HTTP 400 with `{error, message, detail}` — raised by schema validation
+- **`Exception` (catch-all)** → HTTP 500 with `{error, message, exception_type}` — no raw error details leak to the client; full stack trace goes to the log file only
 
 ### Why Middleware as Classes?
 

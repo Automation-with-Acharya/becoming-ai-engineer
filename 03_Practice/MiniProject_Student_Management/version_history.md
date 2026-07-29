@@ -4,6 +4,74 @@ Full changelog for every version of this project: **what** changed, **why** it w
 
 ---
 
+## v12 — Day 018: Global Exception Handling
+
+**When:** Day 018  
+**Theme:** Reliability — replace ad-hoc HTTPException raises and None-checks with a clean custom-exception + global-handler pattern
+
+### What Changed
+
+| Area | Before (v11) | After (v12) |
+|---|---|---|\n| **Custom Exception** | Not present | `exceptions/student_exceptions.py` — `StudentNotFoundException(student_id)` |
+| **Exceptions Package** | Not present | `exceptions/__init__.py` — re-exports `StudentNotFoundException` for clean imports |
+| **Service: get_student_by_id** | Returns `None` when student not found | Raises `StudentNotFoundException` — no more nullable return type |
+| **Service: delete_student** | Returns `bool` (False when not found) | Raises `StudentNotFoundException` — no more boolean flag |
+| **Router: get / delete** | Manual `if student is None` / `if not deleted` → raises `HTTPException` | Removed — exception propagates automatically to global handler |
+| **Global Handler: 404** | Not present | `@app.exception_handler(StudentNotFoundException)` → `{error, message, student_id}` JSON |
+| **Global Handler: 500** | Not present | `@app.exception_handler(Exception)` catch-all → `{error, message, exception_type}` JSON |
+| **Exception Logging** | Not applicable | All handlers log via centralized logger (`WARNING` for 404, `EXCEPTION` for 500) |
+| **App Version** | `4.0.0` | `5.0.0` |
+
+### Why
+
+Without a consistent exception strategy:
+- Routers accumulate boilerplate `if result is None: raise HTTPException(...)` in every handler.
+- The client receives either a vague `500 Internal Server Error` HTML page or inconsistent JSON shapes across endpoints.
+- Service layer was returning nullable types (`None` / `bool`) that pushed error-handling responsibility to the wrong layer.
+
+A custom exception + global handler separates concerns properly:
+- The **service layer** detects the error and raises the right domain exception.
+- The **global handler** in `main.py` decides the HTTP status code and JSON response shape — once, for the whole app.
+- The **router** stays completely clean — it just calls the service and returns the result.
+
+### How (Five Exercises)
+
+| Exercise | What | Implementation |
+|---|---|---|
+| **Day 018 Ex 1** | Raise `HTTPException` for a missing student | Moved to service layer: `get_student_by_id` and `delete_student` raise `StudentNotFoundException` instead of returning `None`/`False`; router no longer raises `HTTPException` |
+| **Day 018 Ex 2** | Create `StudentNotFoundException` | `exceptions/student_exceptions.py` — subclasses `Exception`, stores `student_id` as an attribute, sets a human-readable message via `super().__init__()` |
+| **Day 018 Ex 3** | Global handler for `StudentNotFoundException` | `@app.exception_handler(StudentNotFoundException)` in `main.py` — returns `HTTP 404` with `{error, message, student_id}` |
+| **Day 018 Ex 4** | Log the exception | All handlers call `logger.warning()` (client errors) or `logger.exception()` (server errors) via the existing `logger_config` infrastructure; no `print()` used |
+| **Day 018 Ex 5** | Trigger scenarios via Swagger | GET/DELETE with a non-existent ID → 404 JSON; POST with empty name → 400 JSON; terminal shows WARNING; `logs/application.log` shows full structured entry |
+
+### Key Concept: Exception Handler Precedence
+
+FastAPI evaluates exception handlers from **most-specific to least-specific**:
+
+```text
+@app.exception_handler(StudentNotFoundException)  ← checked first for StudentNotFoundException
+@app.exception_handler(ValueError)               ← checked first for ValueError
+@app.exception_handler(Exception)                ← catch-all fallback (last resort)
+```
+
+This means the catch-all `Exception` handler never silently swallows errors that already have a dedicated handler — each exception type gets the right response shape.
+
+### Where
+
+```
+exceptions/
+├── __init__.py              ← NEW: re-exports StudentNotFoundException
+└── student_exceptions.py   ← NEW: StudentNotFoundException(student_id) class
+
+main.py                      ← Added: student_not_found_exception_handler, unhandled_exception_handler
+                                Updated: app version 4.0.0 → 5.0.0; comment labels updated to Day 017 Exn
+services/student_service.py  ← Updated: get_student_by_id raises StudentNotFoundException (not return None)
+                                         delete_student raises StudentNotFoundException (not return False)
+routers/students.py          ← Updated: removed manual None/bool checks; HTTPException import removed
+```
+
+---
+
 ## v11 — Day 017: Python Logging Practice
 
 **When:** Day 017  

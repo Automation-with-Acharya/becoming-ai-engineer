@@ -19,9 +19,11 @@ Request vs. Response Models:
 - Student_response_model : Used for RESPONSE bodies (server → client). 'id' is always a required int.
 
 Day 017 Update: Structured logging added for all route handlers and exception paths.
+Day 018 Update: Manual not-found checks removed — StudentNotFoundException raised by the service
+                layer is now caught globally in main.py, keeping route handlers clean.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from models.student import Student_model, Student_response_model
 from services.student_service import StudentService
 from dependencies import get_student_service
@@ -164,13 +166,9 @@ def get_student_by_id(
         - 404 Not Found: Raised if a student with the given ID does not exist in the database.
     """
     logger.info("Router: GET /students/%d", student_id)
+    # Day 018: No None-check here — service raises StudentNotFoundException if not found;
+    # the global handler in main.py converts it to HTTP 404 automatically.
     student = service.get_student_by_id(student_id)
-    if student is None:
-        logger.warning("Router: Student id=%d not found — returning 404.", student_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student with ID {student_id} not found."
-        )
     logger.info("Router: Returning student id=%d, name='%s'.", student.id, student.name)
     return student
 
@@ -202,12 +200,8 @@ def delete_student(
         - 404 Not Found: Raised if a student with the given ID does not exist.
     """
     logger.info("Router: DELETE /students/%d", student_id)
-    deleted = service.delete_student(student_id)
-    if not deleted:
-        logger.warning("Router: Delete failed — student id=%d not found — returning 404.", student_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student with ID {student_id} not found. Deletion failed."
-        )
+    # Day 018: No explicit bool-check here — service raises StudentNotFoundException if not found;
+    # the global handler in main.py converts it to HTTP 404 automatically.
+    service.delete_student(student_id)
     logger.info("Router: Student id=%d deleted successfully.", student_id)
     return {"message": f"Student with ID {student_id} deleted successfully."}

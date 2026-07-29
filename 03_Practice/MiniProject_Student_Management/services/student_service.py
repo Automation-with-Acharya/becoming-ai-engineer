@@ -10,11 +10,14 @@ Return types use Student_response_model (not Student_model) because:
   - Student_model (with id: int | None) is only used for the incoming request body shape.
 
 Day 017 Update: Structured logging added for all service operations and exception paths.
+Day 018 Update: Raises StudentNotFoundException instead of returning None/False so the router
+                stays free of manual not-found checks and the global handler takes over.
 """
 
 from models.student import Student_model, Student_response_model
 from schemas.student_schema import StudentSchema
 from repositories.student_repository import StudentRepository
+from exceptions import StudentNotFoundException
 from logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -87,7 +90,7 @@ class StudentService:
             logger.exception("Service: Unexpected error in get_all_students.")
             raise
 
-    def get_student_by_id(self, student_id: int) -> Student_response_model | None:
+    def get_student_by_id(self, student_id: int) -> Student_response_model:
         """
         Retrieve a student by unique ID.
 
@@ -95,16 +98,22 @@ class StudentService:
             student_id (int): Student ID.
 
         Returns:
-            Student_response_model | None: Student object with valid id if found, otherwise None.
+            Student_response_model: The found student (always has a valid id).
+
+        Raises:
+            StudentNotFoundException: If no student exists with the given ID.
         """
         logger.debug("Service: get_student_by_id called — id=%d.", student_id)
         try:
             result = self.repository.get_student_by_id(student_id)
             if result is None:
-                logger.warning("Service: Student with id=%d not found.", student_id)
-            else:
-                logger.debug("Service: Found student id=%d, name='%s'.", result.id, result.name)
+                # Day 018 Exercise 1 & 2: raise custom exception instead of returning None
+                logger.warning("Service: Student with id=%d not found — raising StudentNotFoundException.", student_id)
+                raise StudentNotFoundException(student_id=student_id)
+            logger.debug("Service: Found student id=%d, name='%s'.", result.id, result.name)
             return result
+        except StudentNotFoundException:
+            raise  # Already logged above — let it propagate to the global handler
         except Exception:
             logger.exception("Service: Unexpected error in get_student_by_id — id=%d.", student_id)
             raise
@@ -129,24 +138,26 @@ class StudentService:
             logger.exception("Service: Unexpected error in search_students — query='%s'.", cleaned_query)
             raise
 
-    def delete_student(self, student_id: int) -> bool:
+    def delete_student(self, student_id: int) -> None:
         """
         Delete a student by unique ID.
 
         Args:
             student_id (int): Student ID to delete.
 
-        Returns:
-            bool: True if deleted, False if not found.
+        Raises:
+            StudentNotFoundException: If no student exists with the given ID.
         """
         logger.info("Service: delete_student called — id=%d.", student_id)
         try:
-            result = self.repository.delete_student(student_id)
-            if result:
-                logger.info("Service: Student id=%d deleted successfully.", student_id)
-            else:
-                logger.warning("Service: Delete skipped — student id=%d not found.", student_id)
-            return result
+            deleted = self.repository.delete_student(student_id)
+            if not deleted:
+                # Day 018 Exercise 1 & 2: raise custom exception instead of returning False
+                logger.warning("Service: Delete skipped — student id=%d not found — raising StudentNotFoundException.", student_id)
+                raise StudentNotFoundException(student_id=student_id)
+            logger.info("Service: Student id=%d deleted successfully.", student_id)
+        except StudentNotFoundException:
+            raise  # Already logged above — let it propagate to the global handler
         except Exception:
             logger.exception("Service: Unexpected error in delete_student — id=%d.", student_id)
             raise
