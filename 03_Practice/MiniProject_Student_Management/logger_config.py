@@ -88,10 +88,13 @@ def _configure_root_logger() -> logging.Logger:
     logger.addHandler(file_handler)
 
     # ── Day 017 Exercise 1 / Day 019 Exercise 6: Console (Stream) Handler ──
-    # Level is driven by LOG_LEVEL in .env (via settings.log_level_int).
+    # Level is driven by LOG_LEVEL in .env (settings.log_level string).
     # Default is INFO; set LOG_LEVEL=DEBUG in .env to see trace-level output.
+    _console_level = logging.getLevelName(settings.log_level.upper())
+    if not isinstance(_console_level, int):
+        _console_level = logging.INFO  # fallback for unrecognised values
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(settings.log_level_int)
+    stream_handler.setLevel(_console_level)
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 

@@ -108,8 +108,8 @@ HTTP Request
 | **Middleware** | `middleware/request_middleware.py` | Request logging, execution timing, console logging, CORS, order demo |
 | **Model** | `models/student.py` | Two Pydantic models: `Student_model` (request body) and `Student_response_model` (response body) |
 | **Schema** | `schemas/student_schema.py` | Validates & sanitizes raw user input (e.g. non-empty name) |
-| **Database Helper** | `database/database_helper.py` | Manages connection lifecycle, executes raw SQL via `psycopg`; reads DB credentials from `settings` |
-| **Repository** | `repositories/student_repository.py` | Abstracts storage; `PostgresStudentRepository` implements CRUD |
+| **Database Helper** | `database/database_helper.py` | Manages connection lifecycle, executes raw SQL via `psycopg`; `execute_write()` and `execute_write_transaction()` provide explicit ACID transaction management (Day 020) |
+| **Repository** | `repositories/student_repository.py` | Abstracts storage; `PostgresStudentRepository` implements CRUD; `add_student` and `delete_student` use explicit transactions |
 | **Service** | `services/student_service.py` | Orchestrates validation + repository calls; raises `StudentNotFoundException` for missing records |
 | **Router** | `routers/students.py` | Maps HTTP endpoints to service operations; no manual not-found checks needed |
 | **Auth Utils** | `auth/password_utils.py` | bcrypt password hashing (`hash_password`) and verification (`verify_password`) via `passlib` |
@@ -160,6 +160,12 @@ HTTP Request
 - 📨 **Split Request/Response Models** — `Student_model` for client input, `Student_response_model` for server output
 - ✅ **Field-Level Validation** — Pydantic `Field` constraints enforce `min_length`, `max_length`, and `ge=0` at the model layer
 - 📧 **Email Validation** — `EmailStr` type ensures the email field is a valid email address format
+
+**Database Transactions (Day 020)**
+- 🔄 **`execute_write()`** — single write query wrapped in explicit `BEGIN`/`COMMIT`/`ROLLBACK` via psycopg's `connection.transaction()` context manager; used by `delete_student`
+- ⛓️ **`execute_write_transaction()`** — multi-step atomic transaction accepting a callable that runs all SQL inside one `BEGIN`/`COMMIT` block; used by `add_student` (ID-fetch + INSERT = one atomic unit)
+- ⏪ **Rollback on failure** — `execute_query()` now calls `connection.rollback()` on any exception, preventing the connection from getting stuck in an aborted state
+- ✅ **ACID guarantees** — Atomicity (write fully or not at all), Consistency (DB constraints checked before commit), Isolation (READ COMMITTED), Durability (committed data survives restarts)
 
 **Configuration (Day 019)**
 - ⚙️ **Pydantic Settings** — `config.py` defines a typed `Settings` class; reads from `.env` automatically via `pydantic-settings`
@@ -309,6 +315,26 @@ The `@asynccontextmanager lifespan` in `main.py`:
 - **Startup**: Connects to PostgreSQL and verifies/creates the table schema once.
 - **Shutdown**: Closes the connection cleanly, preventing socket leaks.
 - **Efficiency**: A single persistent connection serves all incoming requests.
+
+### Why a Configuration Module?
+
+`config.py` uses Pydantic `BaseSettings` to define every setting as a typed Python attribute. Pydantic reads values from the `.env` file automatically (via `python-dotenv`) and falls back to declared defaults.
+
+- **Type safety**: `DEBUG=yes` in `.env` raises a validation error at startup rather than silently misbehaving.
+- **Single source of truth**: `from config import settings` gives any module access to all config — no scattered `os.getenv()` calls.
+- **Separation of environments**: Change `.env` for dev/staging/prod without touching source code.
+- **Security**: Real secrets stay in `.env` (not committed); `.env.example` is the safe, committable template.
+
+### Why ACID Transactions?
+
+Before Day 020, write operations used `commit=True` inside `execute_query()` — a single-line commit with no rollback path. This left two gaps:
+
+1. **Dirty connection state**: If a query fails, psycopg leaves the connection in an aborted-transaction state. All subsequent queries fail with `InFailedSqlTransaction` until an explicit rollback is issued.
+2. **Race condition on CREATE**: `add_student` fetched the max ID and then inserted in two separate queries. Under concurrent load, two requests could read the same max ID and both attempt to INSERT the same primary key.
+
+`execute_write()` and `execute_write_transaction()` fix both:
+- psycopg's `connection.transaction()` context manager issues `BEGIN` on entry and `COMMIT` on clean exit, or `ROLLBACK` automatically on any exception.
+- `add_student` now runs the SELECT and INSERT inside a single `connection.transaction()` block — no other writer can slip in between them.
 
 ### Why a Configuration Module?
 

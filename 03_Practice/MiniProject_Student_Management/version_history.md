@@ -4,6 +4,69 @@ Full changelog for every version of this project: **what** changed, **why** it w
 
 ---
 
+## v14 — Day 020: Database Transactions and ACID
+
+**When:** Day 020  
+**Theme:** Data integrity — wrap all write operations in explicit ACID transactions so the database is never left in a partial or dirty state
+
+### What Changed
+
+| Area | Before (v13) | After (v14) |
+|---|---|---|
+| **`execute_query()` failure path** | Logs and re-raises; connection left in aborted state | Now calls `connection.rollback()` before re-raising; connection is always clean for next query |
+| **`execute_write()` (new)** | Not present | Wraps a single INSERT/UPDATE/DELETE in `connection.transaction()` — automatic COMMIT on success, ROLLBACK on failure |
+| **`execute_write_transaction()` (new)** | Not present | Accepts a callable `steps(cursor)` and runs it inside one `connection.transaction()` — entire multi-step operation is one atomic unit |
+| **`add_student` in repository** | Two separate calls: `fetch_one()` (SELECT max id) then `execute_query()` (INSERT) with `commit=True` — race condition window between them | Single `execute_write_transaction()` call; SELECT and INSERT share one cursor inside one transaction |
+| **`delete_student` in repository** | `execute_query(..., commit=True)` — commit but no rollback on failure | `execute_write()` — explicit transaction with automatic rollback on any error |
+| **App Version** | `6.0.0` | `7.0.0` |
+
+### Why
+
+The previous write pattern had two concrete problems:
+
+1. **Dirty connection state after failure**: psycopg3 operates in autocommit=False mode by default. When a query fails, the connection enters an aborted transaction state. Any subsequent query on the same connection raises `InFailedSqlTransaction` — effectively rendering the connection unusable — until `rollback()` is called explicitly. This was never called.
+
+2. **Race condition in `add_student`**: The ID-generation `SELECT COALESCE(MAX(id),0)+1` and the `INSERT` were two separate round-trips to the database. Under concurrent load (e.g. two simultaneous POST `/students/` requests), both could read the same max ID, then both attempt to INSERT with that same primary key — the second would fail with a unique-constraint violation.
+
+### How
+
+| Change | Where | Detail |
+|---|---|---|
+| Rollback on query failure | `DatabaseHelper.execute_query()` | Added `try: self.connection.rollback()` in the `except` block before re-raising |
+| `execute_write()` | `DatabaseHelper` | Uses `with self.connection.transaction():` context manager; single cursor executes the write |
+| `execute_write_transaction()` | `DatabaseHelper` | Uses `with self.connection.transaction():` + `with cursor:` then calls `steps(cur)` and returns its result |
+| `add_student` atomic | `PostgresStudentRepository` | Defined `_create(cur)` inner function with SELECT + INSERT; passed to `execute_write_transaction()` |
+| `delete_student` transactional | `PostgresStudentRepository` | Replaced `execute_query(..., commit=True)` with `execute_write(DELETE_SQL, params)` |
+
+### Key Concept: psycopg Transaction Context Manager
+
+```python
+with self.connection.transaction():   # issues BEGIN
+    with self.connection.cursor() as cur:
+        cur.execute(...)              # all statements here are in the same transaction
+# issues COMMIT if no exception, ROLLBACK if exception raised
+```
+
+This is the psycopg3 idiomatic way to manage transactions. The `connection.transaction()` context manager:
+- Issues `BEGIN` on `__enter__`
+- Issues `COMMIT` on clean `__exit__`
+- Issues `ROLLBACK` on `__exit__` with an exception — no explicit cleanup needed
+
+### Where
+
+```
+database/
+  database_helper.py     ← execute_query: added rollback in except block
+                            execute_write: NEW — single write in one transaction
+                            execute_write_transaction: NEW — multi-step callable transaction
+
+repositories/
+  student_repository.py  ← add_student: SELECT+INSERT now one atomic transaction via execute_write_transaction()
+                            delete_student: DELETE now uses execute_write() instead of execute_query(commit=True)
+```
+
+---
+
 ## v13 — Day 019: Configuration & Environment Variables
 
 **When:** Day 019  

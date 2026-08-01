@@ -25,6 +25,7 @@ Usage:
 """
 
 import logging
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,7 +54,7 @@ class Settings(BaseSettings):
 
     # ── Security (JWT) ───────────────────────────────────────────────────────
     # Day 019 Exercise 4: JWT secret moved out of jwt_utils.py hardcode
-    jwt_secret_key: str
+    jwt_secret_key: SecretStr
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
 
@@ -63,7 +64,7 @@ class Settings(BaseSettings):
     db_port: int
     db_name: str
     db_user: str
-    db_password: str
+    db_password: SecretStr
 
     # ── Logging ──────────────────────────────────────────────────────────────
     # Day 019 Exercise 6: Console log level controlled via LOG_LEVEL env var

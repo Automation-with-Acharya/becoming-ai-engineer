@@ -12,6 +12,10 @@ Return types use Student_response_model (not Student_model) because:
     caller (service layer) constructs it before the id is known.
 
 Day 017 Update: Structured logging added for all CRUD operations and exception paths.
+Day 020 Update: Write operations (add_student, delete_student) now use explicit ACID transactions
+                via execute_write_transaction() and execute_write() in DatabaseHelper.
+                - add_student: ID-fetch + INSERT run atomically in one transaction (no race condition).
+                - delete_student: DELETE wrapped in execute_write() for guaranteed rollback on failure.
 """
 
 from abc import ABC, abstractmethod
@@ -121,6 +125,13 @@ class PostgresStudentRepository(StudentRepository):
         """
         Add a new student to PostgreSQL database and generate unique ID.
 
+        Day 020: The ID-generation SELECT and the INSERT are now wrapped in a single
+        ACID transaction via execute_write_transaction(). This means:
+          - Both statements either succeed together or are rolled back together.
+          - No other concurrent writer can claim the same ID between the SELECT and INSERT.
+          - If the INSERT violates a constraint (e.g., duplicate ID), the whole transaction
+            is rolled back cleanly, leaving the DB in its prior state.
+
         Args:
             student (Student_model): Student object with name, age, city (id is None at this point).
 
@@ -128,33 +139,36 @@ class PostgresStudentRepository(StudentRepository):
             Student_response_model: Student object with the database-assigned id.
 
         Raises:
-            Exception: Re-raises any database error after logging.
+            Exception: Re-raises any database error after logging and rolling back.
         """
         logger.info("Repository: Creating student — name='%s'", student.name)
         try:
-            # Calculate next available ID
-            next_id_row = self.db_helper.fetch_one(
-                "SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM students"
-            )
-            assigned_id = next_id_row[0] if next_id_row else 1
+            # Day 020: Both steps run inside one atomic transaction.
+            # `execute_write_transaction` opens BEGIN, runs the lambda with a cursor,
+            # then issues COMMIT on success or ROLLBACK on any exception.
+            def _create(cur):
+                # Step 1: Calculate the next available ID
+                cur.execute("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM students")
+                assigned_id = cur.fetchone()[0]
 
-            # Insert student into database
-            self.db_helper.execute_query(
-                "INSERT INTO students (id, name, age, city, email) VALUES (%s, %s, %s, %s, %s)",
-                (assigned_id, student.name, student.age, student.city, student.email),
-                commit=True,
-            )
+                # Step 2: Insert the new student record — same cursor, same transaction
+                cur.execute(
+                    "INSERT INTO students (id, name, age, city, email) VALUES (%s, %s, %s, %s, %s)",
+                    (assigned_id, student.name, student.age, student.city, student.email),
+                )
+                return assigned_id
+
+            assigned_id = self.db_helper.execute_write_transaction(_create)
+
             logger.info(
                 "Repository: Student created successfully — id=%d, name='%s'",
                 assigned_id, student.name,
             )
-            # Return a Student_response_model (id is now a required int — guaranteed by the DB insert)
             return Student_response_model(
                 id=assigned_id, name=student.name,
                 age=student.age, city=student.city, email=student.email,
             )
         except Exception:
-            # Exercise 4: Full stack trace captured in the log file
             logger.exception(
                 "Repository: Failed to create student — name='%s'", student.name
             )
@@ -235,6 +249,12 @@ class PostgresStudentRepository(StudentRepository):
         """
         Delete a student record from PostgreSQL database by ID.
 
+        Day 020: The DELETE is executed via execute_write(), which wraps it in an explicit
+        ACID transaction with automatic rollback on failure. The existence check (SELECT)
+        intentionally remains outside the transaction — it is a read-only guard, and
+        performing it inside the same transaction offers no additional benefit here since
+        the service layer already raises StudentNotFoundException before we reach this point.
+
         Args:
             student_id (int): ID of student to delete.
 
@@ -250,10 +270,10 @@ class PostgresStudentRepository(StudentRepository):
                 )
                 return False
 
-            self.db_helper.execute_query(
+            # Day 020: DELETE inside an explicit transaction — rolled back automatically on failure.
+            self.db_helper.execute_write(
                 "DELETE FROM students WHERE id = %s",
                 (student_id,),
-                commit=True,
             )
             logger.info("Repository: Student id=%d deleted successfully.", student_id)
             return True

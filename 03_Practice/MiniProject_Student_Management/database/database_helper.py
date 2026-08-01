@@ -7,6 +7,10 @@ Day 017 Update: All print() statements replaced with structured logger calls.
                 Exception logging via logger.exception() inside try/except blocks to capture full stack traces.
 Day 019 Update: Database connection settings now read from config.py / .env (Exercise 5).
                 Removed individual os.getenv() calls — settings object is the single source of truth.
+Day 020 Update: Proper ACID transaction handling added.
+                execute_write() wraps single write queries in an explicit BEGIN/COMMIT/ROLLBACK block.
+                execute_write_transaction() runs a caller-supplied sequence of queries atomically.
+                execute_query() now issues a rollback on failure to leave the connection in a clean state.
 """
 
 import psycopg
@@ -113,6 +117,10 @@ class DatabaseHelper:
         """
         Execute an SQL query against PostgreSQL database.
 
+        Prefer `execute_write()` for INSERT / UPDATE / DELETE — it wraps the
+        operation in an explicit transaction with automatic rollback on failure.
+        Use this method directly only for SELECT queries or when `commit=False`.
+
         Args:
             query (str): SQL query statement.
             params (tuple, optional): Parameters for SQL query. Defaults to None.
@@ -139,8 +147,115 @@ class DatabaseHelper:
             return result
 
         except Exception:
-            # Exercise 4: Log exception with full stack trace for any DB query failure
+            # Day 020: Rollback on any failure to leave the connection in a clean, usable state.
+            # Without rollback, psycopg leaves the connection in an aborted transaction state
+            # and all subsequent queries on the same connection will fail with
+            # "InFailedSqlTransaction" until the transaction is explicitly rolled back.
+            try:
+                self.connection.rollback()
+                logger.warning("Transaction rolled back after query failure: %.80s", query.strip())
+            except Exception:
+                logger.exception("Rollback itself failed after query error.")
             logger.exception("Database query failed. Query: %.80s", query.strip())
+            raise
+
+    def execute_write(self, query, params=None):
+        """
+        Day 020: Execute a single write (INSERT / UPDATE / DELETE) inside an explicit
+        ACID transaction.
+
+        Why a dedicated write method?
+        --------------------------------
+        psycopg3 by default operates in autocommit=False mode, meaning every statement
+        is inside an implicit transaction. However, relying on an implicit transaction
+        makes it easy to forget committing or rolling back. This method makes the
+        transaction lifecycle explicit and self-contained:
+
+          1. Executes the write query inside psycopg's `connection.transaction()` block.
+          2. On success  : COMMIT is issued automatically when the `with` block exits.
+          3. On failure  : ROLLBACK is issued automatically — the DB is restored to its
+                           pre-operation state (Atomicity guarantee).
+
+        ACID properties guaranteed:
+          - Atomicity    : The write either completes fully or not at all.
+          - Consistency  : DB constraints (NOT NULL, PRIMARY KEY) are enforced before COMMIT.
+          - Isolation    : The transaction is isolated from concurrent writes at the
+                           default READ COMMITTED level PostgreSQL provides.
+          - Durability   : After COMMIT, the change survives server restarts.
+
+        Args:
+            query (str): SQL INSERT / UPDATE / DELETE statement.
+            params (tuple, optional): Query parameters (use %s placeholders).
+
+        Returns:
+            None
+
+        Raises:
+            Exception: Re-raises any database error after logging and rolling back.
+        """
+        if self.connection is None:
+            self.connect()
+
+        try:
+            with self.connection.transaction():   # BEGIN … COMMIT / ROLLBACK
+                with self.connection.cursor() as cur:
+                    cur.execute(query, params)
+            logger.debug("Write transaction committed: %.80s", query.strip())
+        except Exception:
+            logger.exception("Write transaction rolled back. Query: %.80s", query.strip())
+            raise
+
+    def execute_write_transaction(self, steps):
+        """
+        Day 020: Execute multiple write queries as a single atomic transaction.
+
+        Why this method?
+        ----------------
+        Some operations (e.g., ID-generation + INSERT) require two or more SQL
+        statements to succeed or fail together. If the INSERT fails after the
+        ID lookup has already read a value, re-running with a fresh ID lookup
+        is safe. But wrapping both in one transaction prevents any other writer
+        from grabbing the same ID in between (race condition under concurrent load).
+
+        Usage example (repository):
+            result = self.db_helper.execute_write_transaction([
+                ("SELECT COALESCE(MAX(id),0)+1 FROM students", None, True),  # (query, params, fetch)
+                lambda cur, next_id: cur.execute(INSERT_SQL, (next_id, ...)),
+            ])
+
+        For simplicity this API accepts a callable that receives the cursor and
+        can return any value needed for subsequent steps:
+
+            def steps(cur):
+                cur.execute("SELECT COALESCE(MAX(id),0)+1 AS nid FROM students")
+                next_id = cur.fetchone()[0]
+                cur.execute(INSERT_SQL, (next_id, ...))
+                return next_id
+
+            new_id = self.db_helper.execute_write_transaction(steps)
+
+        Args:
+            steps (callable): A function that accepts a psycopg cursor and performs
+                              all the necessary SQL operations. Its return value is
+                              forwarded to the caller.
+
+        Returns:
+            Any: Whatever `steps(cursor)` returns.
+
+        Raises:
+            Exception: Re-raises any database error after rollback and logging.
+        """
+        if self.connection is None:
+            self.connect()
+
+        try:
+            with self.connection.transaction():      # BEGIN … COMMIT / ROLLBACK
+                with self.connection.cursor() as cur:
+                    result = steps(cur)
+            logger.debug("Multi-step write transaction committed.")
+            return result
+        except Exception:
+            logger.exception("Multi-step write transaction rolled back.")
             raise
 
     def fetch_all(self, query, params=None):
