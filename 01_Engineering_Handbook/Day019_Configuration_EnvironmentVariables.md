@@ -137,7 +137,7 @@ Settings()
 Application
 ```
 
-The code remains unchanged.
+The code remains unchanged,
 
 Only configuration changes.
 

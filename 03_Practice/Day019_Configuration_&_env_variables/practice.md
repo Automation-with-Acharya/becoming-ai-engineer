@@ -27,10 +27,10 @@ Move the database URL into the configuration.
 
 ## Exercise 6: Use Configuration for Logging
 
-Use configuration values inside logging.
+Use configuration values inside logging...
 
 Example:
 
 ```env
-LOG_LEVEL=
+LOG_LEVEL =
 ```

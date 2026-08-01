@@ -109,7 +109,7 @@ def decode_token(token: str) -> dict:
     Exercise 3: Decode and verify a JWT, returning its full payload.
 
     How it works:
-    -------------
+    --------------
     1. python-jose splits the token at the dots into [header_b64, payload_b64, sig_b64].
     2. It re-computes the expected signature using SECRET_KEY and compares
        it against sig_b64 (using constant-time comparison to prevent timing attacks).
