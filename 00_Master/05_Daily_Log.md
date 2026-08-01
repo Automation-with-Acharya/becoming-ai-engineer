@@ -970,3 +970,54 @@ Successfully implemented centralized configuration management and understood how
 - Implement transactional operations within the Student Management project.
 
 **Status:** ✅ Day 019 Successfully Completed
+
+---
+
+---
+
+# Day 020 — Saturday, 01 August 2026
+
+## Completed
+
+- Learned database transactions, ACID properties, transaction boundaries, and the importance of maintaining data consistency.
+- Understood the concepts of `COMMIT`, `ROLLBACK`, and transaction lifecycle using PostgreSQL and Psycopg.
+- Implemented transactional database operations within the Student Management project to ensure safe and consistent write operations.
+- Practiced handling transaction failures by rolling back incomplete database changes and understood the role of transactions in enterprise applications.
+- Created the Day 020 Engineering Handbook and updated the GitHub repository with transaction-aware backend improvements.
+
+---
+
+## Lessons
+
+- A transaction groups multiple database operations into a single logical unit that either succeeds completely or fails completely.
+- The ACID properties ensure reliability, consistency, isolation, and durability of database operations.
+- `COMMIT` permanently saves changes, while `ROLLBACK` restores the database to its previous consistent state when failures occur.
+- Transaction management belongs close to the data access layer, allowing business logic to remain focused on business rules.
+- Reliable backend systems prioritize data integrity over partial success, especially when multiple related database operations are involved.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~1.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully understood and implemented database transaction management. The backend now protects business operations from partial failures and follows production-grade practices for maintaining data consistency and reliability.
+
+---
+
+## Tomorrow
+
+- Learn Database Connection Pooling.
+- Understand why connection pools improve application performance and scalability.
+- Explore FastAPI lifespan events and efficient database connection management.
+- Refactor the Student Management project to use a production-style database access strategy.
+
+**Status:** ✅ Day 020 Successfully Completed
