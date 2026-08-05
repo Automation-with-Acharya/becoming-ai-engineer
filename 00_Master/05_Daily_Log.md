@@ -1021,3 +1021,54 @@ Successfully understood and implemented database transaction management. The bac
 - Refactor the Student Management project to use a production-style database access strategy.
 
 **Status:** ✅ Day 020 Successfully Completed
+
+---
+
+---
+
+# Day 021 — Tuesday, 04 August 2026
+
+## Completed
+
+- Learned database connection pooling, FastAPI Lifespan events, and the application startup/shutdown lifecycle.
+- Understood why database connections are expensive resources and how connection pools improve application performance and scalability.
+- Integrated a shared database connection pool into the Student Management project and refactored database access to reuse connections efficiently.
+- Implemented application startup and shutdown logic using FastAPI Lifespan to initialize and clean up shared infrastructure resources.
+- Created the Day 021 Engineering Handbook and updated the GitHub repository with production-style database connection management improvements.
+
+---
+
+## Lessons
+
+- Database connections are expensive to create and should be reused through a connection pool whenever possible.
+- FastAPI Lifespan provides a clean mechanism for initializing and cleaning up shared application resources.
+- Connection pools belong to the infrastructure layer and should be shared across the entire application.
+- Repositories should borrow connections from the pool instead of creating new database connections for every request.
+- Efficient resource management is an important step toward building scalable and production-ready backend systems.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2.5 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully implemented connection pooling and understood application lifecycle management. The backend now manages database resources efficiently and follows production-oriented practices for scalability and performance.
+
+---
+
+## Tomorrow
+
+- Learn Database Indexing and Query Optimization.
+- Understand clustered and non-clustered indexes.
+- Use `EXPLAIN` and `EXPLAIN ANALYZE` to inspect query execution plans.
+- Optimize slow database queries within the Student Management project.
+
+**Status:** ✅ Day 021 Successfully Completed
