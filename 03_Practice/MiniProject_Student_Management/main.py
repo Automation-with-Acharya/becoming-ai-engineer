@@ -6,13 +6,14 @@ layer, registers database lifecycle hooks (lifespan), and defines custom HTTP er
 
 Why is a lifespan handler required here?
 -----------------------------------------
-1. Startup Actions: We need to connect to the PostgreSQL database when the server starts up.
-   `db_helper.connect()` initializes the connection and verifies/creates the database schema.
-2. Shutdown Actions: When the server stops, we must clean up and release connection resources
-   by calling `db_helper.close()`. This prevents socket leaks and dangling PostgreSQL backends.
-3. Lifespan Efficiency: Managing the connection globally inside a lifespan block ensures that 
-   the web server retains a persistent connection (or pool of connections) for all incoming API 
-   requests, rather than incurring the overhead of connecting/disconnecting on every single request.
+1. Startup Actions: We need to open a connection pool to PostgreSQL when the server starts.
+   `db_helper.open_pool()` creates min_size ready connections and verifies/creates the schema.
+2. Shutdown Actions: When the server stops, `db_helper.close_pool()` cleanly drains and closes
+   all pool connections, preventing socket leaks and dangling PostgreSQL backends.
+3. Pool Efficiency: A pool keeps multiple connections open so concurrent requests never wait for
+   a fresh TCP handshake + TLS negotiation. Connections are borrowed per-operation and returned
+   immediately, enabling true parallelism up to max_size simultaneous DB queries.
+   Day 021 Exercise 4: open_pool() / close_pool() are now the lifespan actions.
 """
 
 from contextlib import asynccontextmanager
@@ -42,31 +43,33 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Asynchronous lifespan context manager managing resources for the FastAPI application.
-    Executes database startup connection and shutdown cleanup safely.
+    Day 021 Exercise 4: Async lifespan managing the connection pool lifecycle.
+
+    Startup  — opens the psycopg_pool.ConnectionPool (min_size connections pre-created).
+    Shutdown — closes all pool connections cleanly before the process exits.
     """
     # ------------------ STARTUP ------------------
-    # Retrieve the database helper dependency and establish connection
     db_helper = get_db_helper()
-    logger.info("[Lifespan Startup] Connecting to PostgreSQL...")
+    logger.info(
+        "[\U0001f7e2 Lifespan Startup] Opening connection pool (min=%d, max=%d)...",
+        settings.db_pool_min_size, settings.db_pool_max_size,
+    )
     try:
-        db_helper.connect()
-        logger.info("[Lifespan Startup] Connected and verified table schemas successfully.")
+        db_helper.open_pool()
+        logger.info("[\U0001f7e2 Lifespan Startup] Pool open and schema verified.")
     except Exception:
-        # Exercise 4: logger.exception() records the full stack trace automatically
-        logger.exception("[Lifespan Startup] FAILED to connect to PostgreSQL database.")
+        logger.exception("[\U0001f7e2 Lifespan Startup] FAILED to open connection pool.")
         raise  # Re-raise so FastAPI aborts startup
 
     yield  # Hand over control to the FastAPI application execution
 
     # ------------------ SHUTDOWN ------------------
-    # Safely close connection when the server is stopped
-    logger.info("[Lifespan Shutdown] Closing database connections...")
+    logger.info("[\U0001f534 Lifespan Shutdown] Closing connection pool...")
     try:
-        db_helper.close()
-        logger.info("[Lifespan Shutdown] PostgreSQL connection closed.")
+        db_helper.close_pool()
+        logger.info("[\U0001f534 Lifespan Shutdown] Connection pool closed.")
     except Exception:
-        logger.exception("[Lifespan Shutdown] Error occurred while closing the database connection.")
+        logger.exception("[\U0001f534 Lifespan Shutdown] Error while closing the connection pool.")
 
 
 # Day 019 Exercise 3: App metadata now sourced from settings (.env) — no more hardcoded strings.

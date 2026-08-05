@@ -4,6 +4,84 @@ Full changelog for every version of this project: **what** changed, **why** it w
 
 ---
 
+## v15 — Day 021: Connection Pooling and Lifespan Control
+
+**When:** Day 021  
+**Theme:** Concurrency readiness — replace the single persistent connection with a managed connection pool; every query borrows a connection for exactly one operation and returns it immediately
+
+### What Changed
+
+| Area | Before (v14) | After (v15) |
+|---|---|---|
+| **Connection model** | `self.connection` — one `psycopg.Connection` per `DatabaseHelper` instance, held for the whole process lifetime | `self._pool` — `psycopg_pool.ConnectionPool`; shared pool of up to `DB_POOL_MAX_SIZE` connections |
+| **Startup** | `db_helper.connect()` — opens one connection, runs schema check | `db_helper.open_pool()` — creates `min_size` connections; runs schema check via a borrowed connection |
+| **Shutdown** | `db_helper.close()` — closes the one connection | `db_helper.close_pool()` — drains & closes all pool connections |
+| **Per-query lifecycle** | Connection held from startup to shutdown; queries share it sequentially | Connection borrowed at start of each `execute_*` / `fetch_*` call; returned immediately after |
+| **Concurrency** | Only 1 query at a time (single connection = no parallelism) | Up to `DB_POOL_MAX_SIZE` queries simultaneously |
+| **Config** | Not configurable | `DB_POOL_MIN_SIZE` / `DB_POOL_MAX_SIZE` in `.env` → `settings.db_pool_min_size / max_size` |
+| **Legacy aliases** | `connect()` / `close()` were the only lifecycle methods | `open_pool()` / `close_pool()` are new canonical names; `connect()` / `close()` now delegate to them |
+| **App Version** | `7.0.0` | `8.0.0` |
+
+### Why
+
+A single persistent connection is a development convenience, not a production-ready pattern:
+
+1. **No parallelism**: If 10 requests arrive simultaneously, 9 of them queue behind the one connection. Response time degrades linearly with concurrency.
+2. **Single point of failure**: If that one connection drops (network blip, PostgreSQL restart), the whole application loses database access until the process is restarted.
+3. **Hidden resource leak on errors**: psycopg3 leaves a connection in an aborted-transaction state after any query failure. With a pool, the bad connection is automatically recycled and replaced.
+
+`psycopg_pool.ConnectionPool` addresses all three:
+- Keeps `min_size` connections pre-warmed (no cold-start latency for the first N concurrent requests).
+- Allows up to `max_size` concurrent DB queries; requests beyond that wait in an internal queue (bounded wait, not indefinite blocking).
+- Automatically replaces stale or dead connections; surviving connections keep serving.
+- Each query borrows a connection for its lifetime only — the pool reclaims it the moment the query finishes.
+
+### How (Three Exercises)
+
+| Exercise | What | Implementation |
+|---|---|---|
+| **Day 021 Ex 3** | Replace single connection with pool | `DatabaseHelper`: `self._pool = ConnectionPool(conninfo=..., min_size=..., max_size=..., open=True)`; all `execute_*` / `fetch_*` methods use `with self._pool.connection() as conn:` |
+| **Day 021 Ex 4** | FastAPI Lifespan with pool | `main.py` lifespan: STARTUP calls `db_helper.open_pool()`; SHUTDOWN calls `db_helper.close_pool()`; startup log reports `min` / `max` pool size |
+| **Day 021 Ex 5** | Request-flow trace | `day_21_practice.md` — full `Client → Router → Service → Repository → Pool → Database` trace with exact connection acquire/release points |
+
+### Key Concept: Borrow-per-Operation Pattern
+
+```python
+# Every execute_* method inside DatabaseHelper now looks like this:
+def execute_write(self, query, params=None):
+    with self._pool.connection() as conn:   # ← CONNECTION ACQUIRED here
+        with conn.transaction():            # ← BEGIN
+            with conn.cursor() as cur:
+                cur.execute(query, params)
+                                            # ← COMMIT on clean exit
+                                            # ← ROLLBACK on exception
+    # ← CONNECTION RETURNED TO POOL here (automatically)
+```
+
+The connection is held for **zero time** outside of actual SQL execution. This is what makes the pool effective under concurrent load — connections are never "idle-held" by a request that is doing computation, validation, or JSON serialization.
+
+### Where
+
+```
+config.py                ← Added: db_pool_min_size (int=1), db_pool_max_size (int=5)
+.env                     ← Added: DB_POOL_MIN_SIZE=1, DB_POOL_MAX_SIZE=5; APP_VERSION→8.0.0
+.env.example             ← (should be updated to match .env template)
+
+database/
+  database_helper.py     ← REWRITTEN: self.connection → self._pool (ConnectionPool)
+                            open_pool() / close_pool() — new lifecycle methods
+                            execute_query(), execute_write(), execute_write_transaction(),
+                            fetch_all(), fetch_one() — all now use with self._pool.connection()
+                            connect() / close() — kept as legacy aliases
+
+main.py                  ← Updated lifespan: open_pool() on startup, close_pool() on shutdown
+                            Startup log now includes pool min/max sizes
+
+day_21_practice.md       ← NEW: Exercise 5 answer — full request flow trace with acquire/release points
+```
+
+---
+
 ## v14 — Day 020: Database Transactions and ACID
 
 **When:** Day 020  

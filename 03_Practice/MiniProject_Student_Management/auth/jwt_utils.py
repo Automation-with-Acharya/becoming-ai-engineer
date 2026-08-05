@@ -43,6 +43,7 @@ from jose import jwt, JWTError
 from jose.utils import base64url_decode
 import json
 import base64
+from pydantic import SecretStr
 
 # Day 019 Exercise 4: Read JWT configuration from .env via settings (not hardcoded).
 # The old hardcoded SECRET_KEY is replaced by settings.jwt_secret_key.
@@ -53,7 +54,11 @@ from config import settings
 # -----------------------------------------------------------------------
 # These module-level names are kept for readability inside this file.
 # They are read once at import time from the centralized settings object.
-SECRET_KEY = settings.jwt_secret_key
+SECRET_KEY = (
+    settings.jwt_secret_key.get_secret_value()
+    if isinstance(settings.jwt_secret_key, SecretStr)
+    else settings.jwt_secret_key
+)
 ALGORITHM = settings.jwt_algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.jwt_access_token_expire_minutes
 

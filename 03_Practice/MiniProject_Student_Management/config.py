@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     db_user: str
     db_password: SecretStr
 
+    # Day 021 Exercise 3: Connection pool size — controls how many DB connections are kept open.
+    # min_size: connections pre-opened at startup (always ready, no wait).
+    # max_size: hard ceiling; requests beyond this wait until a connection is returned.
+    db_pool_min_size: int = 1 # we kept default value as 1
+    db_pool_max_size: int = 5 # we kept default value as 5
+
     # ── Logging ──────────────────────────────────────────────────────────────
     # Day 019 Exercise 6: Console log level controlled via LOG_LEVEL env var
     log_level: str = "INFO" #default value is given as INFO in case if it's not mentioned in .env file

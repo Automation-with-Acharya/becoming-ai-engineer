@@ -56,6 +56,7 @@ MiniProject_Student_Management/
 │   └── student_schema.py           # Input validation: sanitizes & validates student name
 │
 ├── version_history.md              # Full changelog: what/why/how/where/when for every version
+├── day_21_practice.md              # Day 021 Exercise 5: full request-flow trace (Client → Pool → DB)
 └── README.md                       # This file
 ```
 
@@ -108,7 +109,7 @@ HTTP Request
 | **Middleware** | `middleware/request_middleware.py` | Request logging, execution timing, console logging, CORS, order demo |
 | **Model** | `models/student.py` | Two Pydantic models: `Student_model` (request body) and `Student_response_model` (response body) |
 | **Schema** | `schemas/student_schema.py` | Validates & sanitizes raw user input (e.g. non-empty name) |
-| **Database Helper** | `database/database_helper.py` | Manages connection lifecycle, executes raw SQL via `psycopg`; `execute_write()` and `execute_write_transaction()` provide explicit ACID transaction management (Day 020) |
+| **Database Helper** | `database/database_helper.py` | Manages a `psycopg_pool.ConnectionPool`; `open_pool()` / `close_pool()` driven by lifespan; `execute_write()` and `execute_write_transaction()` provide explicit ACID transactions (Day 020/021) |
 | **Repository** | `repositories/student_repository.py` | Abstracts storage; `PostgresStudentRepository` implements CRUD; `add_student` and `delete_student` use explicit transactions |
 | **Service** | `services/student_service.py` | Orchestrates validation + repository calls; raises `StudentNotFoundException` for missing records |
 | **Router** | `routers/students.py` | Maps HTTP endpoints to service operations; no manual not-found checks needed |
@@ -161,6 +162,14 @@ HTTP Request
 - ✅ **Field-Level Validation** — Pydantic `Field` constraints enforce `min_length`, `max_length`, and `ge=0` at the model layer
 - 📧 **Email Validation** — `EmailStr` type ensures the email field is a valid email address format
 
+**Connection Pooling (Day 021)**
+- 🏊 **`psycopg_pool.ConnectionPool`** — replaces the single persistent connection; keeps `DB_POOL_MIN_SIZE` connections ready; allows up to `DB_POOL_MAX_SIZE` concurrent connections
+- ⚡ **Borrow-per-operation** — each `execute_*` / `fetch_*` call borrows one connection from the pool, uses it, and returns it immediately; no connection is held between requests
+- 🟢 **`open_pool()`** — called during FastAPI lifespan STARTUP; pre-creates `min_size` connections and verifies the schema
+- 🔴 **`close_pool()`** — called during FastAPI lifespan SHUTDOWN; waits for checked-out connections then closes all cleanly
+- 🔄 **Legacy aliases** — `connect()` / `close()` delegate to `open_pool()` / `close_pool()` so no breaking changes in call-sites
+- 📝 **`day_21_practice.md`** — Exercise 5 answer: full Client→Router→Service→Repository→Pool→DB flow with exact acquire/release points
+
 **Database Transactions (Day 020)**
 - 🔄 **`execute_write()`** — single write query wrapped in explicit `BEGIN`/`COMMIT`/`ROLLBACK` via psycopg's `connection.transaction()` context manager; used by `delete_student`
 - ⛓️ **`execute_write_transaction()`** — multi-step atomic transaction accepting a callable that runs all SQL inside one `BEGIN`/`COMMIT` block; used by `add_student` (ID-fetch + INSERT = one atomic unit)
@@ -178,7 +187,7 @@ HTTP Request
 **Infrastructure**
 - 🌐 **Swagger UI** — interactive API docs auto-generated at `/docs`
 - 🔒 **Global Error Handlers** — `ValueError` → HTTP `400`; `StudentNotFoundException` → HTTP `404`; catch-all `Exception` → HTTP `500` with structured JSON
-- ⚡ **Lifespan Management** — DB connects on startup, disconnects gracefully on shutdown
+- ⚡ **Lifespan Management** — `open_pool()` on startup (pre-warms pool, verifies schema); `close_pool()` on shutdown (cleanly drains all connections)
 - 💉 **Dependency Injection** — `DatabaseHelper → Repository → Service` wired via `Depends()`
 - 🔄 **Swappable Repository** — swap `PostgresStudentRepository` for any other backend with zero service-layer changes
 
@@ -224,6 +233,7 @@ HTTP Request
 | **pydantic[email]** | `EmailStr` type for email format validation |
 | **python-dotenv** | Reads `.env` file into the process environment |
 | **psycopg** | PostgreSQL database driver (v3) |
+| **psycopg-pool** | `ConnectionPool` — manages a pool of reusable PostgreSQL connections for concurrency |
 | **PostgreSQL** | Relational database backend |
 | **python-jose** | JWT generation, signing (HS256), and decoding |
 | **passlib[bcrypt]** | Secure password hashing with bcrypt + `CryptContext` abstraction |
@@ -242,7 +252,7 @@ HTTP Request
    ```
 3. Install dependencies:
    ```bash
-   pip install fastapi uvicorn psycopg pydantic pydantic[email] python-jose passlib[bcrypt] pydantic-settings python-dotenv
+   pip install fastapi uvicorn psycopg psycopg-pool pydantic pydantic[email] python-jose passlib[bcrypt] pydantic-settings python-dotenv
    ```
 4. Copy the environment template and fill in your values:
    ```bash
@@ -267,6 +277,8 @@ All settings are managed in the **`.env`** file (loaded by `config.py` via Pydan
 | `DB_NAME` | *(set in .env)*  | PostgreSQL database name |
 | `DB_USER` |  *(set in .env)*  | PostgreSQL username |
 | `DB_PASSWORD` | *(set in .env)* | PostgreSQL password |
+| `DB_POOL_MIN_SIZE` | `1` | Connections opened eagerly at startup (always ready) |
+| `DB_POOL_MAX_SIZE` | `5` | Max concurrent connections; requests above this wait in queue |
 | `LOG_LEVEL` | `INFO` | Console log level (`DEBUG`/`INFO`/`WARNING`/`ERROR`) |
 
 ### Start the Server
@@ -309,21 +321,24 @@ get_db_helper() → get_student_repository() → get_student_service()
 - `StudentService` depends on the *interface*, not `PostgresStudentRepository`.
 - Swap storage backends (MongoDB, SQLite, in-memory) by only modifying `dependencies.py`.
 
+### Why a Connection Pool?
+
+A single persistent connection (Day 020 and earlier) works for a single developer but breaks under concurrent load:
+- If two requests arrive at the same time, the second must wait for the first to finish — **zero parallelism**.
+- If the connection drops, the whole app loses DB access until restart.
+
+`psycopg_pool.ConnectionPool` solves both:
+- **Concurrency**: Up to `DB_POOL_MAX_SIZE` requests can execute queries simultaneously, each on their own connection.
+- **Resilience**: If a connection goes stale, the pool replaces it automatically; other connections keep serving.
+- **Efficiency**: Connections are borrowed for one operation and returned immediately — no connection is tied to a request for its entire lifetime.
+- **Tunable**: `DB_POOL_MIN_SIZE` controls how many connections are pre-warmed at startup (zero cold-start latency for that many concurrent requests).
+
 ### Why a Lifespan Handler?
 
 The `@asynccontextmanager lifespan` in `main.py`:
-- **Startup**: Connects to PostgreSQL and verifies/creates the table schema once.
-- **Shutdown**: Closes the connection cleanly, preventing socket leaks.
-- **Efficiency**: A single persistent connection serves all incoming requests.
-
-### Why a Configuration Module?
-
-`config.py` uses Pydantic `BaseSettings` to define every setting as a typed Python attribute. Pydantic reads values from the `.env` file automatically (via `python-dotenv`) and falls back to declared defaults.
-
-- **Type safety**: `DEBUG=yes` in `.env` raises a validation error at startup rather than silently misbehaving.
-- **Single source of truth**: `from config import settings` gives any module access to all config — no scattered `os.getenv()` calls.
-- **Separation of environments**: Change `.env` for dev/staging/prod without touching source code.
-- **Security**: Real secrets stay in `.env` (not committed); `.env.example` is the safe, committable template.
+- **Startup**: Opens the connection pool (`open_pool()`), pre-creates `min_size` connections, verifies/creates the table schema.
+- **Shutdown**: Closes all pool connections cleanly (`close_pool()`), preventing socket leaks.
+- **Efficiency**: The pool keeps connections alive across all requests; no TCP handshake per request.
 
 ### Why ACID Transactions?
 
