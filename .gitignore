@@ -32,3 +32,6 @@ desktop.ini
 # Coverage
 .coverage
 htmlcov/
+
+# experimental dataset creation query file for creating 2.5 million records
+data_entry_query.sql
