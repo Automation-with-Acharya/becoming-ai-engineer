@@ -1072,3 +1072,54 @@ Successfully implemented connection pooling and understood application lifecycle
 - Optimize slow database queries within the Student Management project.
 
 **Status:** ✅ Day 021 Successfully Completed
+
+---
+
+---
+
+# Day 022 — Friday, 07 August 2026
+
+## Completed
+
+- Learned database indexing fundamentals, query optimization concepts, and the role of indexes in improving database performance.
+- Understood Sequential Scan, Index Scan, `EXPLAIN`, and `EXPLAIN ANALYZE`, and interpreted PostgreSQL execution plans.
+- Created and experimented with database indexes, comparing indexed and non-indexed query execution on a large dataset.
+- Generated approximately **2.5 million sample student records** to perform realistic performance testing and observe PostgreSQL optimizer behavior.
+- Updated the Student Management project, completed all practical exercises, created the Day 022 Engineering Handbook, and pushed the changes to GitHub.
+
+---
+
+## Lessons
+
+- Database indexes act like a library catalog, allowing PostgreSQL to locate rows efficiently without scanning the entire table.
+- `EXPLAIN` shows the planned execution strategy, while `EXPLAIN ANALYZE` executes the query and reports actual performance metrics.
+- Indexes significantly improve read performance but introduce additional maintenance overhead during insert, update, and delete operations.
+- Effective indexing depends on query patterns and should be based on measurement rather than indexing every column.
+- Realistic performance testing requires sufficiently large datasets, making execution plans and optimization decisions much more meaningful.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~3 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully understood database indexing, query execution plans, and performance optimization concepts. Built a large-scale dataset for realistic experimentation and gained practical insight into how PostgreSQL chooses execution strategies based on available indexes.
+
+---
+
+## Tomorrow
+
+- Learn Pagination, Sorting, and Filtering.
+- Understand `LIMIT` and `OFFSET`.
+- Design scalable list endpoints for large datasets.
+- Refactor the Student Management project to support efficient data retrieval for millions of records.
+
+**Status:** ✅ Day 022 Successfully Completed
