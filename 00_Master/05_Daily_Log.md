@@ -1123,3 +1123,58 @@ Successfully understood database indexing, query execution plans, and performanc
 - Refactor the Student Management project to support efficient data retrieval for millions of records.
 
 **Status:** ✅ Day 022 Successfully Completed
+
+---
+
+---
+
+# Day 023 — Sunday, 09 August 2026
+
+## Completed
+
+- Learned Docker fundamentals and understood why containerization is used to create consistent and reproducible application environments.
+- Understood the relationship between Dockerfile, Docker Image, and Docker Container, including the basic build and run lifecycle.
+- Learned the roles of Docker CLI, Docker Engine, Docker Images, Containers, and Docker Hub/registries.
+- Practiced and documented essential Docker commands including `docker --version`, `docker images`, `docker pull`, `docker run`, `docker ps`, and `docker ps -a`.
+- Understood the difference between Docker containers and Virtual Machines and how Docker will eventually be used to package and run the Student Management FastAPI application.
+
+---
+
+## Lessons
+
+- A Dockerfile contains instructions for building a Docker image, while a Docker image is the template from which containers are created.
+- A Docker container is a running instance of an image and can be started, stopped, and replaced without modifying the image itself.
+- `docker run` can automatically pull an image if it does not already exist locally, create a container, and start it.
+- `docker ps` shows running containers, while `docker ps -a` shows both running and stopped/exited containers.
+- Docker provides reproducible application environments and helps reduce differences between development, testing, and production machines.
+- Containers are generally lighter than virtual machines because they share the host operating system kernel rather than requiring a complete guest operating system.
+- Docker is a deployment and runtime concern that complements rather than replaces the Clean Architecture already implemented in the application.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+---
+
+## Confidence
+
+**9.5 / 10**
+
+Successfully understood the fundamental Docker mental model, container lifecycle, image management, and essential Docker CLI commands. Ready to move from understanding Docker concepts to actually containerizing the FastAPI application.
+
+---
+
+## Tomorrow
+
+- Create a Dockerfile for the Student Management FastAPI application.
+- Build the FastAPI Docker image.
+- Run the application inside a Docker container.
+- Configure container port mapping and environment variables.
+- Test the FastAPI Swagger UI through the Docker container.
+- Understand container logs and basic container troubleshooting.
+
+**Status:** ✅ Day 023 Successfully Completed
