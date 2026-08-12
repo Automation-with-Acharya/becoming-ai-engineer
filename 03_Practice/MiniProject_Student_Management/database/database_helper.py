@@ -202,6 +202,30 @@ class DatabaseHelper:
                     """
                 )
 
+                # ── Deduplicate existing students by email before enforcing the UNIQUE index.
+                # If the table already contains multiple rows with the same email, PostgreSQL
+                # will reject the unique index creation. We preserve the row with the lowest
+                # id and remove later duplicates.
+                cur.execute(
+                    """
+                    WITH duplicates AS (
+                        SELECT id,
+                               ROW_NUMBER() OVER (PARTITION BY email ORDER BY id) AS row_num
+                        FROM students
+                        WHERE email IS NOT NULL
+                    )
+                    DELETE FROM students
+                    WHERE id IN (
+                        SELECT id FROM duplicates WHERE row_num > 1
+                    )
+                    """
+                )
+                if cur.rowcount:
+                    logger.warning(
+                        "Removed %d duplicate student row(s) sharing the same email before creating the unique index.",
+                        cur.rowcount,
+                    )
+
                 # ── Index 1: UNIQUE B-Tree on email ────────────────────────────────
                 # Exact-match lookups (WHERE email = %s) become O(log N).
                 # The UNIQUE constraint also prevents duplicate email registrations.
