@@ -1178,3 +1178,68 @@ Successfully understood the fundamental Docker mental model, container lifecycle
 - Understand container logs and basic container troubleshooting.
 
 **Status:** ✅ Day 023 Successfully Completed
+
+---
+
+---
+
+# Day 024 — Wednesday, 12 August 2026
+
+## Completed
+
+- Learned how to Dockerize a real FastAPI application using a Dockerfile.
+- Created and configured the Dockerfile using `FROM`, `WORKDIR`, `COPY`, `RUN`, `EXPOSE`, and `CMD`.
+- Built the `student-management-api` Docker image and successfully ran the FastAPI application inside a Docker container.
+- Configured Docker port mapping and understood the difference between `EXPOSE`, Uvicorn's listening port, and `-p HOST_PORT:CONTAINER_PORT`.
+- Created and used `.dockerignore` to prevent unnecessary and sensitive files such as `.env`, virtual environments, and cache files from entering the Docker build context.
+- Configured environment variables for the container and successfully connected the Dockerized FastAPI application to the existing PostgreSQL database.
+- Troubleshot Docker Desktop / WSL issues, Pydantic Settings configuration issues, and PostgreSQL connectivity problems.
+- Learned why `localhost` inside a Docker container refers to the container itself and used `host.docker.internal` to connect the containerized application to PostgreSQL running on the host machine.
+- Practiced container inspection using `docker ps`, `docker ps -a`, and `docker logs`.
+- Intentionally introduced a Docker application failure, inspected the container logs, identified the root cause, fixed the issue, rebuilt the image, and verified the application successfully.
+- Tested the Dockerized Student Management API through Swagger UI and verified the CRUD operations.
+- Preserved the existing Clean Architecture while introducing Docker as the application's deployment and runtime layer.
+- Created the Day 024 Engineering Handbook and updated the GitHub repository with the Dockerization work and troubleshooting documentation.
+
+---
+
+## Lessons
+
+- A Dockerfile defines how an application image is built, while a Docker container is a running instance of that image.
+- `RUN` executes during image construction, while `CMD` defines the default command executed when the container starts.
+- `EXPOSE` documents the container port but does not publish it to the host machine.
+- `-p HOST_PORT:CONTAINER_PORT` creates the actual host-to-container port mapping.
+- Uvicorn should listen on `0.0.0.0` inside a container so Docker can forward external traffic to the application.
+- Environment-specific configuration should be supplied to containers rather than hardcoded into the application or Docker image.
+- `localhost` inside a container refers to that container itself, not the host machine.
+- `host.docker.internal` can be used when a containerized application needs to communicate with a service running on the Docker host.
+- Docker troubleshooting follows the same engineering principle learned earlier: inspect the actual runtime logs, identify the root cause, fix it, and verify the result rather than guessing.
+- Container logs provide an important debugging path when the API client only reports a generic HTTP 500 error.
+- Docker complements Clean Architecture by providing the runtime/deployment environment around the Router → Service → Repository → Database architecture.
+- Real engineering learning often requires spending more time troubleshooting than initially planned; resolving the problems independently produced deeper understanding than simply following a successful tutorial.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~4 Hours (spread across 2 days)
+
+---
+
+## Confidence
+
+**9 / 10**
+
+Successfully transitioned from understanding Docker fundamentals to actually containerizing, running, debugging, and verifying the Student Management FastAPI application. The additional troubleshooting time resulted in a much deeper understanding of Docker networking, environment configuration, container logs, and the relationship between the host machine and containerized applications.
+
+---
+
+## Tomorrow
+
+- Continue with Day 025 according to the frozen 12-week Project ₹50L roadmap.
+- Build on today's Docker foundation with the next planned containerization and deployment concepts.
+- Continue integrating Docker into the existing production-style Student Management backend without changing the frozen roadmap.
+
+**Status:** ✅ Day 024 Successfully Completed
