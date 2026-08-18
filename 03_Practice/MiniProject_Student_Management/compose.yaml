@@ -1,0 +1,80 @@
+# =============================================================================
+# compose.yaml — Docker Compose Orchestration for Student Management System
+#
+# Defines two services that form the complete application stack:
+#   - api  : FastAPI application (built from local Dockerfile)
+#   - db   : PostgreSQL database (official Docker Hub image)
+#
+# Docker Compose places both services on a shared virtual network automatically.
+# Services can reach each other using their service name as the hostname
+# (e.g., the api container connects to postgres at host "db", not "localhost").
+#
+# Usage:
+#   docker compose up          → start both services (foreground)
+#   docker compose up -d       → start both services (background / detached)
+#   docker compose down        → stop and remove containers (data volume is preserved)
+#   docker compose down -v     → stop, remove containers AND delete the db volume (data loss!)
+#   docker compose logs api    → stream logs from the api service only
+#   docker compose ps          → list running services and their status
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # api — FastAPI Application Service
+  #
+  # Built from the Dockerfile at the project root (./).
+  # All environment variables (DB credentials, JWT secret, app settings, etc.)
+  # are loaded from the local .env file — no secrets are hard-coded here.
+  #
+  # The container port 8000 is forwarded to the host port 8000, making the API
+  # reachable at http://localhost:8000 from the developer's machine.
+  #
+  # 'depends_on' ensures Docker Compose starts the db service first before
+  # launching the api. Note: this only guarantees container start order, not
+  # that Postgres is fully ready to accept connections. For production, add a
+  # healthcheck-based condition (condition: service_healthy).
+  # ---------------------------------------------------------------------------
+  api:
+    build: .                        # Build the FastAPI image from the local Dockerfile
+    ports:
+      - "8000:8000"                 # Expose the API on host port 8000
+    env_file:
+      - .env                        # Load ALL environment variables from .env (no secrets in this file)
+    depends_on:
+      - db                          # Start db container before starting the api container
+
+  # ---------------------------------------------------------------------------
+  # db — PostgreSQL Database Service
+  #
+  # Uses the official postgres image from Docker Hub.
+  # Credentials (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD) are sourced
+  # entirely from the .env file — the same values used by the FastAPI app.
+  # This ensures the database the api connects to is always consistent with
+  # the database that Postgres initializes.
+  #
+  # The named volume 'postgres_data' persists database files between restarts.
+  # Without this, every 'docker compose down' would erase all student records.
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:latest          # Official PostgreSQL image (always pulls the latest release)
+    ports:
+      - "5433:5432"                 # Expose Postgres on host port 5433 (to avoid conflict with any local Postgres on 5432)
+    env_file:
+      - .env                        # Postgres reads POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD from here
+    volumes:
+      # PostgreSQL 18+ stores data in a major-version subdirectory under /var/lib/postgresql
+      # (e.g., /var/lib/postgresql/18/main). Mounting at /var/lib/postgresql (not /data)
+      # lets Postgres manage the subdirectory structure itself, which is required for
+      # pg_upgrade compatibility and correct behaviour on postgres:latest (18+).
+      - postgres_data:/var/lib/postgresql
+
+# =============================================================================
+# Volumes
+#
+# Named volumes are managed by Docker (not a host path bind-mount).
+# Docker creates and maintains 'postgres_data' on the host automatically.
+# The volume survives 'docker compose down' but is removed by 'docker compose down -v'.
+# =============================================================================
+volumes:
+  postgres_data:                    # Persistent storage for PostgreSQL data files

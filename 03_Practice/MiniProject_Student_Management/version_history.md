@@ -4,7 +4,109 @@ Full changelog for every version of this project: **what** changed, **why** it w
 
 ---
 
+## v18 — Day 025: Docker Compose Orchestration
+
+**When:** Day 025  
+**Theme:** Multi-container orchestration — introduce `compose.yaml` to start the FastAPI app and a PostgreSQL container together with a single command; switch `DB_HOST` from `host.docker.internal` to the Compose service name `db`; load all secrets from `.env` so `compose.yaml` itself contains zero hard-coded credentials.
+
+### What Changed
+
+| Area                          |                                    Before (v17) | After (v18)                                                                                              |
+| ----------------------------- | ----------------------------------------------: | -------------------------------------------------------------------------------------------------------- |
+| **`compose.yaml`**            |                         Empty placeholder file  | Full Compose config: `api` service (built from Dockerfile) + `db` service (postgres:latest) + volume    |
+| **Secrets management**        |             Secrets only managed for Docker run | `compose.yaml` uses `env_file: .env`; no credentials hard-coded in the Compose file                     |
+| **DB_HOST**                   | `host.docker.internal` (host-to-container path) | `db` (Compose service-name DNS — container-to-container path)                                            |
+| **POSTGRES_* variables**      |                       Not present in `.env`     | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` added; postgres container reads them on first init   |
+| **Volume**                    |                            No persistent volume | Named volume `postgres_data` persists DB data across `docker compose down` / `up` cycles                 |
+| **README**                    |     Mentioned `docker-compose.yml` as "optional" | Full Docker Compose section added: networking diagram, `env_file` explanation, all Compose commands       |
+| **App Version**               |                                        `10.0.0` | `11.0.0`                                                                                                 |
+
+### Why
+
+Docker Compose solves the remaining gap from Day 024: the FastAPI container could run but still required a Postgres database running on the host machine (`host.docker.internal`). This created an implicit external dependency that broke portability. With Compose:
+
+- **Self-contained stack**: both services start together; no host Postgres installation needed.
+- **Service-name DNS**: Docker's internal DNS resolver maps service names to container IPs automatically. Pointing `DB_HOST=db` is more robust than any host-based address.
+- **Secret hygiene**: `env_file: .env` delegates all secret management to the `.env` file — the `compose.yaml` file is safe to commit with no sensitive values.
+- **Data persistence**: without a named volume, `docker compose down` would destroy all database data on every cycle. The `postgres_data` volume survives container restarts.
+
+### How
+
+**New `compose.yaml`:**
+
+```yaml
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+```
+
+**Updated `.env`:**
+
+```env
+# FastAPI app connection (DB_HOST now points at the Compose service name)
+DB_HOST=db
+
+# Postgres container initialisation (first-startup only)
+POSTGRES_DB=student_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=password@postgres
+```
+
+**Key Compose commands learned:**
+
+```bash
+docker compose up            # Start all services (foreground)
+docker compose up -d         # Start all services (detached)
+docker compose down          # Stop and remove containers (volume preserved)
+docker compose ps            # List running services
+docker compose logs api      # Tail logs from the api service
+docker compose up --build    # Rebuild images and start
+```
+
+**Networking flow:**
+
+```
+FastAPI Container  (service: api)
+│
+│  DB_HOST=db   ←── set in .env
+▼
+Docker Internal DNS
+│
+▼
+PostgreSQL Container  (service: db)
+```
+
+### Where
+
+```
+compose.yaml              ← written from scratch (was an empty placeholder)
+.env                      ← DB_HOST changed from host.docker.internal → db;
+                             POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD added
+README.md                 ← Project structure updated; Docker Compose section rewritten
+                             as Option B (Recommended); Tech Stack updated
+version_history.md        ← this v18 entry added
+```
+
+---
+
 ## v17 — Day 024: Dockerization
+
 
 **When:** Day 024  
 **Theme:** Containerization — provide a reproducible, portable way to build and run the FastAPI app using Docker images and containers; document `Dockerfile`, `.dockerignore`, run/build commands, and host-to-container networking notes (host gateway / `host.docker.internal`).

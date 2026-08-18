@@ -18,6 +18,8 @@ MiniProject_Student_Management/
 ├── logger_config.py                # Logging config: central Logger, FileHandler, StreamHandler, Formatter
 ├── .env                            # Local environment variables (never commit — add to .gitignore)
 ├── .env.example                    # Safe template for .env — commit this instead
+├── Dockerfile                      # Container image definition for the FastAPI application
+├── compose.yaml                    # Docker Compose: orchestrates api + db services with a shared network
 │
 ├── exceptions/                     # Custom exceptions package (Day 018)
 │   ├── __init__.py
@@ -204,6 +206,14 @@ HTTP Request
 - 💉 **Dependency Injection** — `DatabaseHelper → Repository → Service` wired via `Depends()`
 - 🔄 **Swappable Repository** — swap `PostgresStudentRepository` for any other backend with zero service-layer changes
 
+**Docker Compose Orchestration (Day 025)**
+
+- 🐳 **One-Command Stack** — `docker compose up` starts FastAPI + PostgreSQL together; no manual container linking required
+- 🔗 **Service-Name Networking** — Docker DNS resolves `db` → Postgres container IP; `DB_HOST=db` in `.env` is all that's needed
+- 🔐 **Zero Secrets in Compose** — `compose.yaml` contains no credentials; all env vars loaded via `env_file: .env`
+- 💾 **Persistent Volume** — named volume `postgres_data` preserves student records across `docker compose down` / `up` cycles
+- 📋 **`compose.yaml`** — defines `api` (built from local Dockerfile) and `db` (official `postgres:latest`) services with expressive inline comments
+
 **Exception Handling (Day 018)**
 
 - 🎯 **Custom Exception** — `StudentNotFoundException` carries `student_id`; raised by service layer, keeping routers clean
@@ -255,6 +265,8 @@ HTTP Request
 | **python-jose**       | JWT generation, signing (HS256), and decoding                                           |
 | **passlib[bcrypt]**   | Secure password hashing with bcrypt + `CryptContext` abstraction                        |
 | **logging** (stdlib)  | Python standard library logging — `Logger`, `FileHandler`, `StreamHandler`, `Formatter` |
+| **Docker**            | Container runtime — builds and runs reproducible application images                     |
+| **Docker Compose**    | Multi-container orchestration — starts FastAPI + PostgreSQL together with one command   |
 
 ---
 
@@ -312,6 +324,8 @@ The server starts at **`http://127.0.0.1:8000`** with hot-reload enabled.
 
 You can run the application inside Docker for a reproducible environment.
 
+#### Option A — Single Container (FastAPI only, external Postgres)
+
 Build the image from the project root:
 
 ```bash
@@ -334,9 +348,71 @@ Notes:
 docker rm student-api
 ```
 
-Optional orchestration:
+#### Option B — Docker Compose (FastAPI + PostgreSQL, fully containerized) ✅ Recommended
 
-- Use a `docker-compose.yml` to run the FastAPI app alongside Postgres in a single network (recommended for end-to-end local testing). In that setup, point `DB_HOST` at the Postgres service name (e.g., `db`).
+Docker Compose starts **both** the FastAPI API and a PostgreSQL database container together on a shared virtual network — no local Postgres installation required.
+
+All environment variables (app settings, DB credentials, JWT secret) are loaded directly from your `.env` file. The `compose.yaml` hard-codes nothing.
+
+**Before starting**, make sure your `.env` contains:
+
+```env
+# FastAPI connects to the "db" service via Docker DNS
+DB_HOST=db
+
+# Postgres container reads these to initialise the database on first startup
+POSTGRES_DB=student_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your-password
+```
+
+**Start the entire stack with one command:**
+
+```bash
+docker compose up          # foreground (see logs inline)
+docker compose up -d       # detached (background)
+```
+
+**Inspect running services:**
+
+```bash
+docker compose ps
+```
+
+Expected output:
+
+```
+NAME                              SERVICE   STATUS    PORTS
+student_management-api-1          api       running   0.0.0.0:8000->8000/tcp
+student_management-db-1           db        running   5432/tcp
+```
+
+**Stop and remove containers (data volume is preserved):**
+
+```bash
+docker compose down
+```
+
+**Rebuild images after code changes:**
+
+```bash
+docker compose up --build
+```
+
+**Service-name networking explained:**
+
+```
+FastAPI Container  (service: api)
+│
+│  DB_HOST=db   ←── set in .env
+▼
+Docker Internal DNS
+│
+▼
+PostgreSQL Container  (service: db)
+```
+
+Inside the Compose network, Docker automatically resolves the service name `db` to the Postgres container's internal IP. Using `localhost` or `host.docker.internal` here would cause a connection failure.
 
 ### Access the API
 
