@@ -1243,3 +1243,67 @@ Successfully transitioned from understanding Docker fundamentals to actually con
 - Continue integrating Docker into the existing production-style Student Management backend without changing the frozen roadmap.
 
 **Status:** ✅ Day 024 Successfully Completed
+
+---
+
+---
+
+---
+
+# Day 025 — Tuesday, 18 August 2026
+
+## Completed
+
+- Learned Docker Compose fundamentals and the architecture of multi-container applications.
+- Converted the Student Management project from a single Dockerized FastAPI application with a host-based PostgreSQL dependency into a fully containerized FastAPI + PostgreSQL stack managed by Docker Compose.
+- Created and configured `compose.yaml` with separate `api` and `db` services, including image building, port mappings, environment configuration, service dependencies, and persistent database storage.
+- Configured PostgreSQL using the official Docker image and introduced a named `postgres_data` volume so database data survives container recreation.
+- Changed database connectivity from `host.docker.internal` to the Compose service name `db` and understood Docker's internal DNS/service-discovery mechanism.
+- Performed hands-on experiments with different `compose.yaml` configurations and troubleshooting scenarios to understand container-to-container networking, host-to-container port publishing, environment variables, volumes, and service behaviour.
+- Connected local pgAdmin to the containerized PostgreSQL instance through the published host port and understood the difference between host-to-container and container-to-container communication.
+- Verified the complete application through Swagger UI and successfully tested the Student Management CRUD endpoints and authentication endpoints against the containerized PostgreSQL database.
+- Practiced essential Docker Compose commands including `docker compose up`, `docker compose up -d`, `docker compose down`, `docker compose ps`, `docker compose logs`, `docker compose logs api`, and `docker compose up --build`.
+- Deliberately changed `DB_HOST=db` to `DB_HOST=localhost`, observed the connection failure, inspected the API logs, identified the cause, restored the correct service-name configuration, and verified the application successfully again.
+- Updated the project README and version history with the Docker Compose architecture, configuration, networking model, and operational commands.
+- Created the Day 025 Engineering Handbook and updated the GitHub repository with the complete multi-container implementation and experiments.
+
+---
+
+## Lessons
+
+- Docker Compose provides a declarative way to define and run a complete multi-container application stack.
+- A Compose service name such as `db` becomes a logical hostname that other services can use through Docker's internal DNS.
+- `localhost` inside a container refers to that container itself, while a Compose service name refers to another service on the shared Docker network.
+- Internal container-to-container communication does not require publishing the destination service's port to the host.
+- Host applications such as pgAdmin can connect to a containerized database through a published host port, while the FastAPI container can communicate with PostgreSQL directly through `db:5432`.
+- Named Docker volumes separate persistent database data from disposable container lifecycles.
+- `depends_on` controls container startup order but does not by itself guarantee that the dependent service is ready to accept connections.
+- Environment configuration, Docker Compose, and Pydantic Settings work together to keep deployment-specific values outside application code.
+- Multi-container troubleshooting requires understanding the difference between host networking, container networking, service discovery, ports, environment configuration, logs, and persistent storage.
+- Experimenting with different infrastructure configurations provides deeper engineering understanding than simply copying a working Compose file.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~4 Hours (spread across 2 days)
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully built and understood a complete multi-container development environment using Docker Compose. The FastAPI application now runs together with PostgreSQL in Docker, communicates through Compose service-name networking, persists database data through a named volume, and remains accessible to local development tools such as pgAdmin. The troubleshooting experiments provided strong practical understanding of Docker networking, service discovery, environment configuration, and container lifecycle.
+
+---
+
+## Tomorrow
+
+- Continue with the next topic defined by the frozen Week 4 Docker and deployment plan.
+- Build further on the Docker Compose foundation with production-oriented container configuration and local deployment practices.
+- Continue integrating Docker infrastructure into the existing Student Management backend without changing the frozen Project ₹50L roadmap.
+
+**Status:** ✅ Day 025 Successfully Completed
