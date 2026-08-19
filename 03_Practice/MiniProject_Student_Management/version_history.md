@@ -4,7 +4,117 @@ Full changelog for every version of this project: **what** changed, **why** it w
 
 ---
 
+## v19 — Day 026: Docker Health Checks
+
+**When:** Day 026  
+**Theme:** Reliability — add a `pg_isready` health check to the `db` service so Docker knows exactly when PostgreSQL is ready to accept connections; upgrade `api`'s `depends_on` to `condition: service_healthy` so the FastAPI container never starts before the database is truly ready.
+
+### What Changed
+
+| Area                             |                                    Before (v18) | After (v19)                                                                                                        |
+| -------------------------------- | ----------------------------------------------: | ------------------------------------------------------------------------------------------------------------------ |
+| **`db` healthcheck**             |                                    Not present  | `pg_isready` probe — interval 5 s, timeout 5 s, retries 5, start_period 10 s                                      |
+| **`api` depends_on**             | `depends_on: - db` (container-start order only) | `depends_on: db: condition: service_healthy` — api waits for db's health check to pass                            |
+| **Race condition**               |   api could fail if Postgres hadn't finished init | Eliminated — Compose holds api until db is `healthy`                                                               |
+| **`docker compose ps` output**   |            Shows `running` for both services     | Shows `running (healthy)` for db; api only reaches `running` after db is healthy                                   |
+| **App Version**                  |                                        `11.0.0` | `12.0.0`                                                                                                           |
+
+### Why
+
+Day 025 introduced `depends_on` but it only guaranteed that the `db` **container** had started — not that PostgreSQL inside it was accepting connections. PostgreSQL performs a one-time cluster initialisation (`initdb`) on its first boot, which takes several seconds. During that window the api container was already starting and attempting to open its connection pool, causing startup failures under cold conditions.
+
+Docker's health check mechanism solves this precisely:
+
+- Docker runs a configurable test command inside the container at a set interval.
+- Until a test passes, the container reports `starting`.
+- After a test exits 0, it becomes `healthy`.
+- After `retries` consecutive failures, it becomes `unhealthy`.
+- `condition: service_healthy` in `depends_on` tells Compose to block the api container until the db container is `healthy` — meaning Postgres has confirmed it is ready to serve connections.
+
+### How
+
+**Healthcheck block added to `db` in `compose.yaml`:**
+
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+  interval: 5s       # run the probe every 5 s
+  timeout: 5s        # fail if probe takes longer than 5 s
+  retries: 5         # declare unhealthy after 5 consecutive failures (~25 s)
+  start_period: 10s  # grace window; failures here don't count toward retries
+```
+
+**`depends_on` upgraded in `api`:**
+
+```yaml
+depends_on:
+  db:
+    condition: service_healthy   # wait for db healthcheck to pass
+```
+
+**Docker health-check state machine:**
+
+```
+Container starts
+      │
+      ▼
+  starting   ← grace period (start_period); failures don't count
+      │
+      ├── probe exits 0 ──────────────────────────────▶  healthy
+      │
+      └── probe fails 5× (after grace period) ─────▶  unhealthy
+```
+
+**Startup sequence (after Day 026):**
+
+```
+Compose
+│
+▼
+db container starts
+│
+▼
+PostgreSQL initializes (initdb on first boot)
+│
+▼
+pg_isready probe passes → db status = healthy
+│
+▼
+api container starts  ← Compose releases hold
+│
+▼
+FastAPI opens connection pool → http://localhost:8000
+```
+
+**Inspect health metadata:**
+
+```bash
+docker inspect miniproject_student_management-db-1
+```
+
+The `Health` section in the output shows:
+
+| Field           | Description                                             |
+| --------------- | ------------------------------------------------------- |
+| `Status`        | `starting` / `healthy` / `unhealthy`                    |
+| `FailingStreak` | Number of consecutive failed probes                     |
+| `Log`           | Last 5 probe results with exit code, output, timestamp  |
+
+### Where
+
+```
+compose.yaml       ← db service: healthcheck block added
+                     api service: depends_on upgraded to condition: service_healthy
+README.md          ← Docker Health Checks feature section added;
+                     startup flow diagram added; docker compose ps output updated;
+                     docker inspect reference added
+version_history.md ← this v19 entry added
+```
+
+---
+
 ## v18 — Day 025: Docker Compose Orchestration
+
 
 **When:** Day 025  
 **Theme:** Multi-container orchestration — introduce `compose.yaml` to start the FastAPI app and a PostgreSQL container together with a single command; switch `DB_HOST` from `host.docker.internal` to the Compose service name `db`; load all secrets from `.env` so `compose.yaml` itself contains zero hard-coded credentials.

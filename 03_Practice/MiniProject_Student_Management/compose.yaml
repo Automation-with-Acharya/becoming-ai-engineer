@@ -9,6 +9,12 @@
 # Services can reach each other using their service name as the hostname
 # (e.g., the api container connects to postgres at host "db", not "localhost").
 #
+# Day 026: Health Checks added.
+#   The db service now runs a pg_isready probe on a configurable interval.
+#   The api service waits for db to be HEALTHY (not just started) before launching.
+#   This prevents the race condition where api tries to connect before Postgres
+#   has finished initializing its cluster.
+#
 # Usage:
 #   docker compose up          → start both services (foreground)
 #   docker compose up -d       → start both services (background / detached)
@@ -30,10 +36,15 @@ services:
   # The container port 8000 is forwarded to the host port 8000, making the API
   # reachable at http://localhost:8000 from the developer's machine.
   #
-  # 'depends_on' ensures Docker Compose starts the db service first before
-  # launching the api. Note: this only guarantees container start order, not
-  # that Postgres is fully ready to accept connections. For production, add a
-  # healthcheck-based condition (condition: service_healthy).
+  # Day 026 change — depends_on with condition: service_healthy
+  #   Previously 'depends_on: - db' only guaranteed that the db CONTAINER had
+  #   started, NOT that PostgreSQL was ready to accept connections. This caused
+  #   a race condition: the api could attempt to open its connection pool while
+  #   Postgres was still initializing, causing startup failures.
+  #
+  #   condition: service_healthy tells Compose to hold the api until the db
+  #   healthcheck reports a passing result (status = "healthy"). Only then is
+  #   the api container created and started.
   # ---------------------------------------------------------------------------
   api:
     build: .                        # Build the FastAPI image from the local Dockerfile
@@ -44,7 +55,8 @@ services:
     volumes:
       - ./logs:/app/logs            # Mount local ./logs directory to /app/logs in the container (for log persistence)
     depends_on:
-      - db                          # Start db container before starting the api container
+      db:
+        condition: service_healthy  # Wait until db passes its health check before starting api
 
   # ---------------------------------------------------------------------------
   # db — PostgreSQL Database Service
@@ -57,11 +69,31 @@ services:
   #
   # The named volume 'postgres_data' persists database files between restarts.
   # Without this, every 'docker compose down' would erase all student records.
+  #
+  # Day 026: healthcheck block
+  #   Docker runs the test command inside the container on the configured
+  #   interval. The result is one of three states:
+  #     starting  — the container just launched; the grace period has not elapsed
+  #     healthy   — the last test exited 0 within the timeout
+  #     unhealthy — the test failed (non-zero exit or timed out) 'retries' times
+  #
+  #   pg_isready is the standard tool for probing Postgres readiness.
+  #   It opens a connection to the server and exits 0 if Postgres is accepting
+  #   connections, non-zero otherwise. It is bundled inside every official
+  #   postgres image so no extra installation is needed.
+  #
+  #   Parameters chosen:
+  #     interval  5s  — probe every 5 seconds; short enough for fast startup feedback
+  #     timeout   5s  — if pg_isready does not respond within 5 s, count it as a failure
+  #     retries   5   — declare "unhealthy" only after 5 consecutive failures (~25 s total)
+  #     start_period 10s — grace period after container start before failures count;
+  #                        Postgres initialization (initdb on first run) can take several
+  #                        seconds; failures during this window do not count toward retries
   # ---------------------------------------------------------------------------
   db:
     image: postgres:latest          # Official PostgreSQL image (always pulls the latest release)
     ports:
-      - "5433:5432"                 # Expose Postgres on host port 5433 (to avoid conflict with any local Postgres on 5432)
+      - "5433:5432"                 # Expose Postgres on host port 5433 (avoids conflict with any local Postgres on 5432)
     env_file:
       - .env                        # Postgres reads POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD from here
     volumes:
@@ -70,6 +102,16 @@ services:
       # lets Postgres manage the subdirectory structure itself, which is required for
       # pg_upgrade compatibility and correct behaviour on postgres:latest (18+).
       - postgres_data:/var/lib/postgresql
+    healthcheck:
+      # pg_isready probes whether PostgreSQL is ready to accept connections.
+      # -U uses the same username as the one configured in POSTGRES_USER.
+      # -d uses the same database name as configured in POSTGRES_DB.
+      # Exit code 0 = healthy, non-zero = unhealthy.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s                  # Run the probe every 5 seconds
+      timeout: 5s                   # Fail the probe if it takes longer than 5 seconds
+      retries: 5                    # Declare unhealthy after 5 consecutive failures
+      start_period: 10s             # Give Postgres up to 10 s to initialize before counting failures
 
 # =============================================================================
 # Volumes

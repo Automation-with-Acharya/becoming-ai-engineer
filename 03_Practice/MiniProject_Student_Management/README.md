@@ -214,6 +214,14 @@ HTTP Request
 - 💾 **Persistent Volume** — named volume `postgres_data` preserves student records across `docker compose down` / `up` cycles
 - 📋 **`compose.yaml`** — defines `api` (built from local Dockerfile) and `db` (official `postgres:latest`) services with expressive inline comments
 
+**Docker Health Checks (Day 026)**
+
+- 🩺 **`pg_isready` Probe** — `db` service runs `pg_isready -U <user> -d <db>` every 5 s; exits 0 = healthy, non-zero = unhealthy
+- ⏱️ **Healthcheck Parameters** — `interval: 5s` · `timeout: 5s` · `retries: 5` · `start_period: 10s`; Postgres gets a 10 s grace window before failures count
+- 🔁 **State Machine** — Docker tracks three states per container: `starting` → `healthy` (pass) or `unhealthy` (5× fail)
+- 🛑 **Race Condition Eliminated** — `api` now uses `condition: service_healthy` instead of plain `depends_on`; Compose holds the api container until db has passed its health check
+- 🔍 **`docker inspect`** — exposes `Health.Status`, `Health.FailingStreak`, and `Health.Log` (last 5 results) for each probe run
+
 **Exception Handling (Day 018)**
 
 - 🎯 **Custom Exception** — `StudentNotFoundException` carries `student_id`; raised by service layer, keeping routers clean
@@ -379,13 +387,27 @@ docker compose up -d       # detached (background)
 docker compose ps
 ```
 
-Expected output:
+Expected output (with health checks — Day 026):
 
 ```
-NAME                              SERVICE   STATUS    PORTS
-student_management-api-1          api       running   0.0.0.0:8000->8000/tcp
-student_management-db-1           db        running   5432/tcp
+NAME                              SERVICE   STATUS             PORTS
+miniproject_student_management-api-1   api  running            0.0.0.0:8000->8000/tcp
+miniproject_student_management-db-1    db   running (healthy)  0.0.0.0:5433->5432/tcp
 ```
+
+**Inspect health check details for a container:**
+
+```bash
+docker inspect miniproject_student_management-db-1
+```
+
+Look for the `Health` section — it contains:
+
+| Field           | Description                                                  |
+| --------------- | ------------------------------------------------------------ |
+| `Status`        | Current state: `starting`, `healthy`, or `unhealthy`         |
+| `FailingStreak` | Number of consecutive failed health check attempts           |
+| `Log`           | Last 5 probe results — exit code, output, and timestamp      |
 
 **Stop and remove containers (data volume is preserved):**
 
@@ -397,6 +419,30 @@ docker compose down
 
 ```bash
 docker compose up --build
+```
+
+**Startup flow with health checks:**
+
+```
+Compose
+│
+▼
+db container starts
+│
+▼
+PostgreSQL initializes (initdb, creates cluster)
+│
+▼
+Healthcheck runs: pg_isready -U postgres -d student_db
+│
+▼
+db status → healthy
+│
+▼
+api container starts  ← only now, held by condition: service_healthy
+│
+▼
+FastAPI opens connection pool → http://localhost:8000
 ```
 
 **Service-name networking explained:**
