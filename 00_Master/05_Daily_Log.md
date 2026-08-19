@@ -1307,3 +1307,55 @@ Successfully built and understood a complete multi-container development environ
 - Continue integrating Docker infrastructure into the existing Student Management backend without changing the frozen Project ₹50L roadmap.
 
 **Status:** ✅ Day 025 Successfully Completed
+
+---
+
+---
+
+# Day 026 — Wednesday, 19 August 2026
+
+## Completed
+
+- Learned Docker health checks, service readiness, and the difference between a container being **running** and the underlying service being **ready**.
+- Added a PostgreSQL `pg_isready` health check to the Docker Compose `db` service and configured `interval`, `timeout`, `retries`, and `start_period`.
+- Upgraded FastAPI's `depends_on` configuration from simple startup ordering to `condition: service_healthy`, eliminating the PostgreSQL startup race condition.
+- Inspected container health using `docker compose ps` and `docker inspect`, including `Status`, `FailingStreak`, and health-check logs.
+- Deliberately broke the PostgreSQL health check, observed the `starting → unhealthy` transition and the API remaining blocked, then restored the configuration and verified the complete `healthy → API starts` flow.
+- Updated the Student Management Docker Compose project, version history, documentation, and practical exercise notes with the new production-oriented startup reliability behavior.
+
+---
+
+## Lessons
+
+- A container being `running` does not mean the service inside it is ready to accept requests.
+- Docker health checks provide an explicit mechanism for determining whether a service is operational and ready.
+- `pg_isready` is an appropriate readiness probe for PostgreSQL and returns a successful exit code when PostgreSQL is accepting connections.
+- `depends_on` with `condition: service_healthy` makes FastAPI wait for PostgreSQL readiness instead of merely waiting for the database container to start.
+- Health checks create a useful state model of `starting`, `healthy`, and `unhealthy`, which is essential for troubleshooting and reliable service orchestration.
+- Service readiness is a foundational distributed-systems concept that becomes increasingly important with microservices, load balancers, Kubernetes, and production AI platforms.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully implemented and experimentally verified production-style service readiness for the FastAPI + PostgreSQL Docker Compose stack. The startup race condition is now explicitly controlled by PostgreSQL health status, and the failure experiment provided a strong practical understanding of how Docker reports and reacts to unhealthy dependencies.
+
+---
+
+## Tomorrow
+
+- Continue with the next topic in the frozen Week 4 Docker and deployment roadmap.
+- Build on Docker Compose, health checks, and service readiness with the next production-oriented containerization concept.
+- Continue integrating the concept into the existing Student Management backend rather than creating an isolated tutorial project.
+
+**Status:** ✅ Day 026 Successfully Completed
