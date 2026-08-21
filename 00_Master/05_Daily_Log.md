@@ -1384,7 +1384,7 @@ Successfully implemented and experimentally verified production-style service re
 - `docker compose config` is a valuable debugging and deployment-audit tool because it shows the configuration Compose will actually use after interpolation.
 - A restart policy and a health check solve different problems: health checks determine service health, while restart policies determine what Docker should do after process termination.
 - Development and production container configurations have different goals; source-code bind mounts can accelerate development, while production should generally rely on immutable, reproducible images.
-- Docker Compose configuration is becoming an operational layer around the application, controlling configuration, networking, persistence, readiness, and recovery without changing the application's business logic.
+- Docker Compose configuration is becoming an operational layer around the application, controlling configuration, networking, persistence, readiness and recovery without changing the application's business logic.
 
 ---
 
