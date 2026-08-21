@@ -1359,3 +1359,55 @@ Successfully implemented and experimentally verified production-style service re
 - Continue integrating the concept into the existing Student Management backend rather than creating an isolated tutorial project.
 
 **Status:** ✅ Day 026 Successfully Completed
+
+---
+
+---
+
+# Day 027 — Friday, 21 August 2026
+
+## Completed
+
+- Learned Docker Compose environment management, environment-variable interpolation, configuration precedence, restart policies, and development-versus-production container configuration.
+- Used `docker compose config` to inspect and audit the fully resolved Compose configuration after `.env` interpolation.
+- Refactored the FastAPI service to use an explicit `environment:` block alongside `env_file`, making important configuration variables visible and individually overridable.
+- Performed a real environment-precedence experiment and verified that values defined through the explicit `environment:` block override corresponding values supplied through `env_file`.
+- Added `restart: on-failure` to the FastAPI service and documented how Docker handles abnormal process exits versus clean shutdowns.
+- Updated the Student Management project's `compose.yaml`, README, version history, and configuration documentation while preserving the Day 26 health-check and service-readiness architecture.
+
+---
+
+## Lessons
+
+- `.env` interpolation performed by Compose and `env_file` injection into a container are related but distinct mechanisms.
+- Docker Compose resolves overlapping environment-variable sources using a deterministic precedence order, with explicit `environment:` values taking precedence over `env_file` values.
+- `docker compose config` is a valuable debugging and deployment-audit tool because it shows the configuration Compose will actually use after interpolation.
+- A restart policy and a health check solve different problems: health checks determine service health, while restart policies determine what Docker should do after process termination.
+- Development and production container configurations have different goals; source-code bind mounts can accelerate development, while production should generally rely on immutable, reproducible images.
+- Docker Compose configuration is becoming an operational layer around the application, controlling configuration, networking, persistence, readiness, and recovery without changing the application's business logic.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully understood and implemented Docker Compose environment management and restart behavior, including real experiments with configuration precedence and resolved Compose output. The Student Management stack now has a more mature operational configuration built on top of the health checks, service readiness, networking, volumes, and multi-container architecture completed on Days 25–26.
+
+---
+
+## Tomorrow
+
+- Continue with the next topic in the frozen Week 4 Docker and local-deployment roadmap.
+- Build on the current Compose configuration and move the Student Management backend closer to a complete local deployment setup.
+- Continue integrating production-oriented container practices into the existing project rather than creating an isolated tutorial project.
+
+**Status:** ✅ Day 027 Successfully Completed
