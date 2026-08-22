@@ -1411,3 +1411,55 @@ Successfully understood and implemented Docker Compose environment management an
 - Continue integrating production-oriented container practices into the existing project rather than creating an isolated tutorial project.
 
 **Status:** ✅ Day 027 Successfully Completed
+
+---
+
+---
+
+# Day 028 — Saturday, 22 August 2026
+
+## Completed
+
+- Learned Docker Compose internal networking and understood how the automatically created bridge network connects the FastAPI and PostgreSQL services.
+- Inspected the live Compose network using `docker network ls` and `docker network inspect`, including the bridge driver, subnet, gateway, connected containers, and internal IP addresses.
+- Verified Docker's internal DNS from inside the API container and confirmed that `DB_HOST=db` is resolved through Docker's embedded DNS server at `127.0.0.11`.
+- Proved why `localhost` inside the FastAPI container cannot be used to reach PostgreSQL running in another container and understood the role of separate container network namespaces.
+- Experimented with internal versus external database connectivity and confirmed that FastAPI uses `db:5432` internally while host-side tools such as pgAdmin can use `localhost:5433` through the published port.
+- Updated the Student Management project's `compose.yaml`, README, version history, and architecture documentation with the complete Docker networking model and troubleshooting commands.
+
+---
+
+## Lessons
+
+- Docker Compose automatically creates a project-level bridge network that allows services to communicate with each other.
+- Compose service names such as `db` provide stable logical identities, while container IP addresses are dynamic and should not be hardcoded by applications.
+- Docker's embedded DNS resolver allows the API container to resolve `db` to the current PostgreSQL container IP.
+- `localhost` inside a container refers to that container's own loopback interface and does not refer to another container or the host machine.
+- Internal container-to-container communication uses the Docker network and internal container port, while published ports such as `5433:5432` are used when external host applications need access.
+- Network inspection and systematic path tracing are essential troubleshooting skills for multi-container applications.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully verified the complete Docker networking model through live experiments rather than relying only on theory. I can now clearly distinguish container-to-container communication, host-to-container communication, service-name DNS resolution, internal ports, published ports, and the meaning of `localhost` inside a container.
+
+---
+
+## Tomorrow
+
+- Begin the next planned phase of the frozen Project ₹50L Week 4 Docker and local-deployment roadmap.
+- Continue building on the complete FastAPI + PostgreSQL Docker Compose foundation.
+- Move toward completing the production-oriented local deployment capabilities of the Student Management backend.
+
+**Status:** ✅ Day 028 Successfully Completed
