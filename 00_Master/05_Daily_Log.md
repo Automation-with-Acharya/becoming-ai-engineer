@@ -1463,3 +1463,55 @@ Successfully verified the complete Docker networking model through live experime
 - Move toward completing the production-oriented local deployment capabilities of the Student Management backend.
 
 **Status:** ✅ Day 028 Successfully Completed
+
+---
+
+---
+
+# Day 029 — Monday, 24 August 2026
+
+## Completed
+
+- Hardened the Student Management Docker image by reviewing image contents, strengthening `.dockerignore`, removing development-only artifacts from the build context, and improving runtime image hygiene.
+- Introduced a dedicated non-root `appuser` and verified that the FastAPI container runs as `appuser` rather than `root`.
+- Rebuilt and deployed the complete FastAPI + PostgreSQL stack with Docker Compose, preserving the existing health-check, service-readiness, environment, networking, and persistence architecture.
+- Performed a complete end-to-end smoke test covering Swagger, JWT authentication, protected endpoints, and the full Student CRUD lifecycle against containerized PostgreSQL.
+- Verified container recovery and full environment recreation using `docker compose stop/start` and `docker compose down/up`, proving that the named PostgreSQL volume preserves database data across container recreation.
+- Deliberately introduced a `DB_HOST=localhost` failure and diagnosed it using Compose status, logs, resolved configuration, and network knowledge before restoring `DB_HOST=db` and verifying the complete system again.
+
+---
+
+## Lessons
+
+- A production-oriented container should contain only the runtime components and application artifacts it actually needs.
+- Running application processes as a non-root user follows the least-privilege principle and reduces the impact of a potential container compromise.
+- A reproducible deployment should be recreatable from repository-controlled artifacts such as the Dockerfile, Compose configuration, and safe configuration templates.
+- Container lifecycle and persistent database-data lifecycle are separate concerns when a named volume is used correctly.
+- Production troubleshooting is a systematic process: inspect state, read logs, verify resolved configuration, inspect networking, identify the root cause, and then fix and verify.
+- The complete Docker progression now works as one system: Compose orchestration, health checks, environment configuration, restart behavior, internal networking, persistent storage, and runtime hardening.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully completed and verified the local deployment foundation for Student Backend v2. The backend can now be built, started, recovered, recreated, inspected, and tested as a complete Docker Compose application while preserving health checks, internal networking, persistent PostgreSQL storage, environment configuration, and application security boundaries.
+
+---
+
+## Tomorrow
+
+- Complete the Week 4 / Student Backend v2 transition as defined by the frozen Project ₹50L roadmap.
+- Consolidate the Docker and local-deployment work before moving into the next planned engineering phase.
+- Preserve the current deployment architecture rather than introducing unnecessary new infrastructure.
+
+**Status:** ✅ Day 029 Successfully Completed
