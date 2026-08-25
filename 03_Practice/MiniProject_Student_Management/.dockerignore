@@ -1,34 +1,88 @@
-**pycache**/
-_.py[cod]
-_.pyo
-_.pyd
+# =============================================================================
+# .dockerignore — Build Context Filter for Student Management API
+#
+# Docker sends the entire project directory to the Docker daemon as the "build
+# context" during 'docker build' / 'docker compose build'. This file tells the
+# daemon which paths to EXCLUDE from that context.
+#
+# Excluding unnecessary files:
+#   - Reduces the build context size (faster COPY . . step)
+#   - Prevents secrets (.env) from reaching the image
+#   - Prevents dev artifacts (__pycache__, .venv, logs) from inflating image size
+#   - Prevents cache-busting: excluding large files that never change in the
+#     container stops Docker from invalidating the pip install cache layer
+# =============================================================================
+
+# ── Python artifacts ──────────────────────────────────────────────────────────
+# Bytecode and cache files are regenerated at runtime. Exclude them to keep
+# the image clean and prevent stale .pyc files from entering the container.
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
 .Python
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+# The container uses the system Python from the base image and installs
+# dependencies via pip inside the image. A local .venv is irrelevant and would
+# massively inflate the build context (hundreds of MB).
 env/
 venv/
 .venv/
 .python-version
+
+# ── Build / distribution artifacts ───────────────────────────────────────────
 build/
 dist/
-_.egg-info/
+*.egg-info/
+
+# ── Logs and databases ────────────────────────────────────────────────────────
+# Logs are written at runtime and persisted via a bind mount (./logs:/app/logs).
+# Including them in the image would bake stale log content into every build.
+# SQLite databases are not used in production (Postgres is), so exclude them.
 logs/
-_.log
-_.sqlite3
-\*.db
+*.log
+*.sqlite3
+*.db
+
+# ── Test and type-check caches ────────────────────────────────────────────────
 .pytest_cache/
 .mypy_cache/
+
+# ── Python history ────────────────────────────────────────────────────────────
 .python_history
+
+# ── OS artifacts ─────────────────────────────────────────────────────────────
 .DS_Store
+
+# ── Secrets — CRITICAL ────────────────────────────────────────────────────────
+# .env contains database passwords, JWT secrets, and other credentials.
+# It must NEVER be baked into the image. Use 'env_file:' in compose.yaml or
+# runtime environment injection instead.
 .env
 
-# Supporting files like gereating a query to create sample data of 2.5 million records
+# ── Version control ───────────────────────────────────────────────────────────
+# .git contains the full commit history — hundreds of MB that have no place
+# in a runtime container. Also prevents accidental secret exposure via git log.
+.git
+.gitignore
+.gitattributes
 
-Supporting Files/
-
-# Docker files
-
+# ── Docker files ──────────────────────────────────────────────────────────────
+# The Dockerfile itself and compose.yaml are build-time/orchestration files.
+# They don't belong inside the running container image.
 Dockerfile
 dockerfile
+compose.yaml
+compose.yml
+docker-compose.yml
+docker-compose.yaml
 
-# Ignore VS Code workspace settings
+# ── Supporting / dev-only files ───────────────────────────────────────────────
+Supporting Files/
 
+# ── Editor and IDE configuration ─────────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo

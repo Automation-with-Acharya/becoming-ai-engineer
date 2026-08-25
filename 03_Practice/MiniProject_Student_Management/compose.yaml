@@ -11,6 +11,9 @@
 #   network automatically. Both services join it and can reach each other
 #   using their service name as the DNS hostname. The db port is NOT needed
 #   for API↔DB communication; it is only for host-side tools (e.g. pgAdmin).
+# Day 029: Deployment verification — Dockerfile hardened with a non-root user
+#   (appuser); .dockerignore updated to exclude .git, compose.yaml, and editor
+#   config; full end-to-end smoke test (auth → CRUD → PostgreSQL) verified.
 #
 # Full end-to-end traffic flow:
 #

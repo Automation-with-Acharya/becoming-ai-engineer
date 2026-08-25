@@ -238,6 +238,15 @@ HTTP Request
 - 🔌 **Internal vs External Ports** — `db:5432` is used by the api container (internal, no port mapping needed); `localhost:5433→db:5432` is exposed only for host-side tools (pgAdmin, psql)
 - 🔍 **`docker network inspect`** — reveals real subnet, gateway, connected container IPs, and DNS aliases; use to debug networking issues
 
+**Docker Deployment (Day 029)**
+
+- 🔒 **Non-Root User** — Dockerfile creates `appuser` (`adduser --disabled-password --no-create-home`) and runs the container as that user; limits blast radius of any container escape
+- 🧹 **Clean Build Context** — `.dockerignore` updated to exclude `.git` (was missing!), `compose.yaml`, `.gitignore`, `.idea/`, and swap files; prevents secrets and history from entering the image
+- 🔬 **Image Inspection** — `docker images` + `docker image inspect` used to verify size, entrypoint, working directory, and exposed ports; confirmed no dev artifacts baked in
+- 🚀 **Full Smoke Test** — end-to-end verification: login → JWT → protected CRUD endpoints → FastAPI → Repository → PostgreSQL all confirmed working in the containerized stack
+- ♻️ **Container Lifecycle** — `docker compose stop/start` and `docker compose down/up -d` verified; named volume `postgres_data` preserves data across full environment restarts
+- 🛠️ **Failure Drill** — deliberate `DB_HOST=localhost` break drilled the full troubleshooting workflow: `compose ps` → `logs` → `config` → root cause → fix → verify
+
 **Exception Handling (Day 018)**
 
 - 🎯 **Custom Exception** — `StudentNotFoundException` carries `student_id`; raised by service layer, keeping routers clean

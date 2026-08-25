@@ -4,7 +4,124 @@ Full changelog for every version of this project: **what** changed, **why** it w
 
 ---
 
+## v22 — Day 029: Docker Deployment
+
+**When:** Day 029  
+**Theme:** Production hardening — introduce a non-root user (`appuser`) in the Dockerfile, tighten `.dockerignore` to exclude `.git` and other missing patterns, verify the complete image contents, run a full end-to-end smoke test through every application layer, exercise the container lifecycle, and drill deliberate failure troubleshooting.
+
+### What Changed
+
+| Area                        |                              Before (v21) | After (v22)                                                                                                         |
+| --------------------------- | -----------------------------------------: | ------------------------------------------------------------------------------------------------------------------- |
+| **`Dockerfile`**            | Running as `root` (default)               | `useradd --system appuser` + `USER appuser`; `COPY --chown=appuser:appuser`; all comments fully rewritten           |
+| **`.dockerignore`**         | Missing `.git`, `compose.yaml`, `.gitignore`, `.idea/` | All missing patterns added; full comment block explaining why each exclusion matters                 |
+| **`compose.yaml` header**   | Day 028 note only                         | Day 029 note added (non-root, dockerignore, smoke test)                                                             |
+| **App Version**             | `14.0.0`                                  | `15.0.0`                                                                                                            |
+
+### Why
+
+After Days 025–028 the stack is functionally correct — but Day 029 is about **production readiness**:
+
+1. **Non-root user**: The default Docker behaviour runs all processes as `root` inside the container. If an attacker exploits the application (e.g., RCE via a deserialization vulnerability), they inherit root privileges on the container's kernel namespace — a severe security risk. Running as `appuser` (UID assigned by the OS, no password, no login shell) limits the blast radius to the container's own filesystem.
+
+2. **Clean build context**: `.git` was missing from `.dockerignore`. This meant every build was sending hundreds of MB of git history to the Docker daemon unnecessarily. More critically, git history can contain secrets from past commits (removed credentials, old API keys) — these should never reach the image layer cache.
+
+3. **Verified image purity**: `docker image inspect` confirmed the image contains exactly: Python runtime + pip packages + application code — no `.venv`, no `__pycache__`, no logs, no `.env`.
+
+4. **Failure drill**: A deliberate `DB_HOST=localhost` break was reproduced and resolved using the standard troubleshooting workflow, proving the diagnostic toolset works end-to-end.
+
+### How
+
+**Dockerfile — non-root user:**
+
+```dockerfile
+# Before (implicit root):
+COPY . .
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# After:
+RUN useradd --system --no-create-home --shell /bin/false appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
+COPY --chown=appuser:appuser . .
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+Why `useradd` not `adduser`: `adduser` on Debian-based images is interactive (prompts for Full Name, Room Number, etc.) even with `--disabled-password`. `useradd` is the low-level, always-silent utility.
+
+**Verification:**
+
+```bash
+docker compose exec api whoami
+# Output: appuser  ✅
+```
+
+**`docker image inspect` key output:**
+
+```
+Size:        365MB
+WorkingDir:  /app
+User:        appuser
+ExposedPorts: map[8000/tcp:{}]
+Cmd:          [uvicorn main:app --host 0.0.0.0 --port 8000]
+```
+
+**`.dockerignore` additions (previously missing):**
+
+```
+.git               ← was missing — git history should never reach the image
+.gitignore
+.gitattributes
+compose.yaml       ← build-time file, not needed at runtime
+compose.yml
+docker-compose.yml
+docker-compose.yaml
+.idea/
+*.swp / *.swo
+```
+
+**Container lifecycle verified (Exercise 6 & 7):**
+
+```bash
+# Stop/start — db stays healthy throughout
+docker compose stop api     → api stopped, db remains healthy
+docker compose start api    → depends_on re-evaluated, api starts after db healthy
+
+# Full down/up — named volume persists data
+docker compose down         → containers + network removed, volume PRESERVED
+docker compose up -d        → network + containers recreated, existing data intact
+```
+
+**Failure drill (Exercise 9):**
+
+| Step              | Command / Observation                                      |
+| ----------------- | ---------------------------------------------------------- |
+| Inject fault      | `DB_HOST=localhost` in `.env`                              |
+| Symptom           | api starts but fails all DB queries (connection refused)   |
+| `compose ps`      | api `Up` but requests fail (exit 500)                      |
+| `compose logs api`| `connection refused` / `host not found` errors             |
+| `compose config`  | Confirms `DB_HOST: localhost` in resolved config           |
+| Root cause        | `localhost` = api's own loopback; Postgres is in `db`      |
+| Fix               | Restore `DB_HOST=db` in `.env`                             |
+| `compose up -d`   | Stack healthy; all endpoints return 200                    |
+
+### Where
+
+```
+Dockerfile         ← useradd + USER appuser + COPY --chown; full comment rewrite
+.dockerignore      ← .git, compose.yaml, .gitignore, .idea/, swap files added; full comment block
+compose.yaml       ← header: Day 029 note added
+.env               ← APP_VERSION bumped to 15.0.0
+README.md          ← Docker Deployment (Day 029) feature section added
+version_history.md ← this v22 entry added
+```
+
+---
+
 ## v21 — Day 028: Docker Internal Networking
+
 
 **When:** Day 028  
 **Theme:** Networking clarity — document and verify the Docker bridge network that Compose creates automatically; understand service-name DNS resolution, why `localhost` fails between containers, and the distinction between internal (api↔db) and external (host↔db) port paths.
