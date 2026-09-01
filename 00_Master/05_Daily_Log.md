@@ -1515,3 +1515,55 @@ Successfully completed and verified the local deployment foundation for Student 
 - Preserve the current deployment architecture rather than introducing unnecessary new infrastructure.
 
 **Status:** ✅ Day 029 Successfully Completed
+
+---
+
+---
+
+# Day 030 — Wednesday, 26 August 2026
+
+## Completed
+
+- Learned advanced SQL relational query design using `INNER JOIN`, `LEFT JOIN`, `IS NULL`, `GROUP BY`, `COUNT`, and `HAVING`.
+- Inspected the existing Student Management database and correctly chose not to modify the production `public.students` schema because it did not yet contain suitable relationship-bearing tables.
+- Created an isolated `day030_joins` practice schema with `students`, `courses`, and `enrollments`, including primary keys, foreign keys, and a many-to-many student/course relationship.
+- Successfully implemented and validated INNER JOIN, LEFT JOIN, unmatched-record queries, grouped enrollment counts, HAVING filters, and multi-table JOINs against the practice schema.
+- Connected today's SQL concepts back to the existing Clean Architecture and Repository Pattern, reinforcing that JOIN/query mechanics should remain hidden inside the Repository layer rather than leaking into business logic.
+- Preserved project scope and architecture by keeping the relational SQL experiments isolated instead of prematurely introducing Courses/Enrollments into the production Student Management domain.
+
+---
+
+## Lessons
+
+- `INNER JOIN` returns rows where the specified relationship exists on both sides, while `LEFT JOIN` preserves every row from the left-side table.
+- `LEFT JOIN` combined with `IS NULL` is a powerful pattern for finding entities that have no related records.
+- `GROUP BY` and aggregate functions such as `COUNT` allow relational data to be transformed into business-level summaries rather than merely retrieved.
+- `HAVING` filters groups after aggregation and is different from `WHERE`, which filters rows before grouping.
+- A junction table such as `enrollments` is the standard way to model a many-to-many relationship between students and courses using foreign keys.
+- Relational query complexity belongs in the Repository layer, allowing the Service layer to work with business-level operations without knowing JOIN syntax or database implementation details.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+---
+
+## Confidence
+
+**10 / 10**
+
+Successfully understood and validated the major JOIN and relational-query patterns covered today. The concepts were not only practiced against sample data but also connected back to foreign-key design, aggregation, and the Repository abstraction already established in the Student Management backend.
+
+---
+
+## Tomorrow
+
+- Continue with the next topic in the frozen Week 5 database and backend-engineering roadmap.
+- Build on today's JOIN foundation with the next advanced SQL/database-optimization concept.
+- Keep advanced relational-query work connected to the existing Repository and Clean Architecture rather than creating disconnected examples.
+
+**Status:** ✅ Day 030 Successfully Completed
