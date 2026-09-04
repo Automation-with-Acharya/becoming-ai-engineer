@@ -977,17 +977,17 @@ EXPLAIN helps engineers inspect execution
 
 The exact syntax and plan output differ between database engines, but the engineering concept transfers.
 
-| Concept | PostgreSQL | Typical Enterprise .NET / SQL Server Context |
-|---|---|---|
-| Query planner | PostgreSQL planner | SQL Server optimizer |
-| Inspect plan | `EXPLAIN` | Estimated/Actual Execution Plan |
-| Execute + inspect | `EXPLAIN ANALYZE` | Actual execution plan / runtime stats |
-| Sequential access | `Seq Scan` | Table/heap scan equivalent |
-| Indexed access | `Index Scan` | Index Seek / Index Scan concepts |
-| Nested join | `Nested Loop` | Nested Loops |
-| Hash join | `Hash Join` | Hash Match |
-| Merge join | `Merge Join` | Merge Join |
-| Buffer visibility | `BUFFERS` | SQL Server I/O/statistics tooling |
+| Concept           | PostgreSQL         | Typical Enterprise .NET / SQL Server Context |
+| ----------------- | ------------------ | -------------------------------------------- |
+| Query planner     | PostgreSQL planner | SQL Server optimizer                         |
+| Inspect plan      | `EXPLAIN`          | Estimated/Actual Execution Plan              |
+| Execute + inspect | `EXPLAIN ANALYZE`  | Actual execution plan / runtime stats        |
+| Sequential access | `Seq Scan`         | Table/heap scan equivalent                   |
+| Indexed access    | `Index Scan`       | Index Seek / Index Scan concepts             |
+| Nested join       | `Nested Loop`      | Nested Loops                                 |
+| Hash join         | `Hash Join`        | Hash Match                                   |
+| Merge join        | `Merge Join`       | Merge Join                                   |
+| Buffer visibility | `BUFFERS`          | SQL Server I/O/statistics tooling            |
 
 The exact operator names should not be memorized across databases as if they are interchangeable.
 
@@ -1340,23 +1340,23 @@ Reproduce query
 
 # 28. Cheat Sheet
 
-| Item | Meaning |
-|---|---|
-| `EXPLAIN` | Show planner's execution plan |
-| `EXPLAIN ANALYZE` | Execute query + show actual runtime data |
-| `BUFFERS` | Show buffer activity during execution |
-| `Seq Scan` | Sequential table access |
-| `Index Scan` | Access using an index |
-| `Bitmap Scan` | Bitmap-oriented index/table access strategy |
-| `Nested Loop` | Repeated lookup through inner side |
-| `Hash Join` | Hash-based equality join |
-| `Merge Join` | Merge ordered inputs |
-| `cost` | Planner cost units |
-| `rows` | Estimated row count |
-| `actual rows` | Observed row count under `ANALYZE` |
-| `loops` | Number of times a plan node executed |
-| `width` | Estimated average row width |
-| `BUFFERS` | Additional buffer/I/O visibility |
+| Item              | Meaning                                     |
+| ----------------- | ------------------------------------------- |
+| `EXPLAIN`         | Show planner's execution plan               |
+| `EXPLAIN ANALYZE` | Execute query + show actual runtime data    |
+| `BUFFERS`         | Show buffer activity during execution       |
+| `Seq Scan`        | Sequential table access                     |
+| `Index Scan`      | Access using an index                       |
+| `Bitmap Scan`     | Bitmap-oriented index/table access strategy |
+| `Nested Loop`     | Repeated lookup through inner side          |
+| `Hash Join`       | Hash-based equality join                    |
+| `Merge Join`      | Merge ordered inputs                        |
+| `cost`            | Planner cost units                          |
+| `rows`            | Estimated row count                         |
+| `actual rows`     | Observed row count under `ANALYZE`          |
+| `loops`           | Number of times a plan node executed        |
+| `width`           | Estimated average row width                 |
+| `BUFFERS`         | Additional buffer/I/O visibility            |
 
 ### Core commands
 
@@ -1477,6 +1477,13 @@ Before considering Day 31 fully internalized, you should be able to answer “ye
 # 31. Exact Resources Used
 
 These are the primary PostgreSQL references for Day 31.
+
+### Youtube video links to understand Database Engine's Query planner's strategy before executing any query
+
+**URL:**
+
+1. https://www.youtube.com/watch?v=-htbah3eCYg (Mandatory for today's lession)
+2. https://www.youtube.com/watch?v=pj7Fxr8cUJI (Optional)
 
 ### PostgreSQL Documentation — Using EXPLAIN
 

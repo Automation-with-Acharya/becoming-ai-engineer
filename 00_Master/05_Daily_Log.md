@@ -1567,3 +1567,55 @@ Successfully understood and validated the major JOIN and relational-query patter
 - Keep advanced relational-query work connected to the existing Repository and Clean Architecture rather than creating disconnected examples.
 
 **Status:** ✅ Day 030 Successfully Completed
+
+---
+
+---
+
+# Day 031 — Wednesday, 02 September 2026
+
+## Completed
+
+- Deep-dived into PostgreSQL query execution plans using `EXPLAIN`, `EXPLAIN ANALYZE`, and `EXPLAIN (ANALYZE, BUFFERS)`.
+- Practiced reading PostgreSQL plan trees, identifying `Hash Join`, `Seq Scan`, estimated cost, estimated rows, actual rows, execution time, loops, and buffer activity.
+- Extended the Day 30 relational practice schema into `practice_schema` and worked with approximately 1,000 students, 100 courses, and 13,948 enrollments.
+- Experimented with planner statistics using `ANALYZE` and observed how inaccurate estimates can become accurate after statistics are refreshed.
+- Created, removed, and recreated indexes on `enrollments(student_id)` and `enrollments(course_id)` and compared execution plans before and after indexing.
+- Experimented extensively in pgAdmin/psql with schemas, search paths, database sessions, schema-qualified table names, and query execution behaviour, including additional practice with a 2.5-million-record dataset.
+
+---
+
+## Lessons
+
+- `EXPLAIN` shows the planner's estimated execution strategy, while `EXPLAIN ANALYZE` actually executes the query and exposes measured execution behaviour.
+- A `Seq Scan` is not automatically bad; PostgreSQL can correctly prefer sequential scanning when a query touches a large percentage of a table.
+- Indexes are not instructions to PostgreSQL—they are options available to the cost-based optimizer, and the planner may legitimately choose not to use them.
+- Estimated rows versus actual rows is a critical signal because poor cardinality estimates can lead to poor join and scan decisions.
+- `ANALYZE` keeps planner statistics useful after significant data changes and therefore directly influences query-planning quality.
+- Performance engineering should be evidence-driven: measure with execution plans and runtime data, understand the planner's decision, make a change, and measure again rather than optimizing by assumption.
+
+---
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~4 Hours (spread across 2 days)
+
+---
+
+## Confidence
+
+**9 / 10**
+
+The concepts were initially completely new, but extensive hands-on experimentation, independent analysis, YouTube-based reinforcement, large-data testing, and pgAdmin/psql exploration turned the topic from theory into something I can now reason about confidently. I can read the core execution-plan signals and explain why PostgreSQL may choose a particular scan or join strategy.
+
+---
+
+## Tomorrow
+
+- Continue Week 5 with the next database-engineering topic in the frozen roadmap.
+- Connect today's query-performance understanding with repository/query design and practical optimization decisions.
+- Keep building the habit of validating database assumptions with measurements rather than intuition.
+
+**Status:** ✅ Day 031 Successfully Completed
