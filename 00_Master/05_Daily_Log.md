@@ -1619,3 +1619,42 @@ The concepts were initially completely new, but extensive hands-on experimentati
 - Keep building the habit of validating database assumptions with measurements rather than intuition.
 
 **Status:** ✅ Day 031 Successfully Completed
+
+---
+
+---
+
+# Day 032 — Saturday, 5 September 2026
+
+## Day 032 Completed
+
+- Performed hands-on PostgreSQL query optimization against a **2.5 million row `students` dataset** using `EXPLAIN (ANALYZE, BUFFERS)`.
+- Measured the progression from a **Parallel Sequential Scan (142.4 ms)** to single-column indexes, BitmapAnd, and finally a **composite `(city, age)` index (~4 ms)** for the target multi-condition query.
+- Experimented with **composite index column ordering** `(city, age)` vs `(age, city)` and connected the result to selectivity, workload patterns, and B-tree leading-column behavior.
+- Tested the leading-column principle with city-only, city+age, and age-only queries, demonstrating why composite index design must follow real query patterns.
+- Created and tested a **partial index** for active students, then cleaned up unnecessary experimental indexes instead of treating indexing as “more is always better.”
+- Revisited Day 31 execution-plan analysis and connected database optimization back to the existing **Router → Service → Repository → PostgreSQL** architecture.
+
+## Lessons
+
+- **Composite indexes** can dramatically outperform separate single-column indexes when the workload consistently filters on the indexed column combination.
+- B-tree index usefulness depends strongly on the **leading column**; an index `(city, age)` naturally supports `city` and `city + age` predicates, but not an `age`-only predicate efficiently.
+- **Selectivity matters**, but “put the most selective column first” is not a universal rule; actual workload, predicates, sorting, and range conditions determine the right order.
+- `EXPLAIN (ANALYZE, BUFFERS)` turns optimization into an **evidence-driven engineering process** by exposing plan choice, estimated vs actual rows, execution time, and buffer activity.
+- **Partial indexes** are targeted indexes over a subset of rows and are useful when a known workload repeatedly queries that subset.
+- Indexes have costs: storage, maintenance, and write overhead; good database engineering means keeping only indexes justified by real workload requirements.
+
+## Time
+
+**Planned:** 2 Hours
+**Actual:** ~2 Hours
+
+## Confidence
+
+**9.5 / 10**
+
+## Tomorrow
+
+- Continue Week 5 with **Repository Improvements + Testing**, applying the SQL/query knowledge from Days 30–32 inside the existing Student Management architecture and beginning systematic automated testing.
+
+**Status:** ✅ Day 032 Successfully Completed
