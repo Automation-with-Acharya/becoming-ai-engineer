@@ -57,6 +57,15 @@ MiniProject_Student_Management/
 ├── schemas/
 │   └── student_schema.py           # Input validation: sanitizes & validates student name
 │
+├── tests/                          # Automated test suite (Day 033)
+│   ├── conftest.py                 # Shared fixtures: sample_student, mock_service, api_client
+│   ├── unit/
+│   │   └── test_student_service.py # 11 unit tests — StudentService with MagicMock (no DB)
+│   ├── integration/
+│   │   └── test_student_repository.py # 5 integration tests — PostgresStudentRepository (real DB)
+│   └── api/
+│       └── test_student_routes.py  # 11 API tests — HTTP routes via FastAPI TestClient
+│
 ├── version_history.md              # Full changelog: what/why/how/where/when for every version
 ├── day_21_practice.md              # Day 021 Exercise 5: full request-flow trace (Client → Pool → DB)
 └── README.md                       # This file
@@ -246,6 +255,18 @@ HTTP Request
 - 🚀 **Full Smoke Test** — end-to-end verification: login → JWT → protected CRUD endpoints → FastAPI → Repository → PostgreSQL all confirmed working in the containerized stack
 - ♻️ **Container Lifecycle** — `docker compose stop/start` and `docker compose down/up -d` verified; named volume `postgres_data` preserves data across full environment restarts
 - 🛠️ **Failure Drill** — deliberate `DB_HOST=localhost` break drilled the full troubleshooting workflow: `compose ps` → `logs` → `config` → root cause → fix → verify
+
+**Automated Testing (Day 033)**
+
+- 🧪 **Three-Tier Test Suite** — `tests/` contains 27 tests across unit, integration, and API categories; run with `python -m pytest tests/ -v`
+- 🔬 **Unit Tests** — `tests/unit/test_student_service.py` (11 tests): `StudentService` tested with `MagicMock` repository; no database, no Docker, runs in ~1.8 s
+- 🔌 **Integration Tests** — `tests/integration/test_student_repository.py` (5 tests): `PostgresStudentRepository` tested against a real isolated `test_students` table; proves SQL correctness
+- 🌐 **API Tests** — `tests/api/test_student_routes.py` (11 tests): HTTP routes tested via FastAPI `TestClient`; proves status codes (200, 201, 404, 400), JSON shapes, and exception-handler wiring
+- 🧰 **Shared Fixtures** — `tests/conftest.py` provides `sample_student`, `mock_student_service`, `mock_db_helper`, and `api_client` fixtures automatically loaded by all test modules
+- 🔄 **Dependency Override** — `app.dependency_overrides[get_student_service]` swaps the entire production DI chain for a single mock; demonstrates the testability payoff of Clean Architecture
+- 🩹 **Lifespan Patch** — `unittest.mock.patch("dependencies._db_helper", mock)` prevents the lifespan's direct `get_db_helper()` call from attempting a DB connection in API tests
+- 🔒 **Isolated Test Table** — integration tests use a `test_students` table (created/truncated/dropped per session); real `students` table is never modified during testing
+- 🔀 **_SwappingCursor Proxy** — rewrites `students` → `test_students` in SQL before reaching psycopg's read-only C-extension cursor; avoids `AttributeError: 'Cursor' attribute is read-only`
 
 **Exception Handling (Day 018)**
 

@@ -2,6 +2,133 @@
 
 Full changelog for every version of this project: **what** changed, **why** it was changed, **how** it was implemented, **where** in the codebase, and **when** (which day of the course).
 
+## v23 — Day 033: Automated Testing
+
+**When:** Day 033  
+**Theme:** Build a three-tier test suite (unit / integration / API) from scratch using `pytest`, `unittest.mock`, and FastAPI's `TestClient`. Exercises 1–11 exercised across all three layers with 27 tests passing end-to-end.
+
+### What Changed
+
+| Area | Before (v22) | After (v23) |
+| ---- | ------------- | ------------ |
+| **`tests/`** | Did not exist | New directory with `__init__.py`, `conftest.py`, and three sub-packages |
+| **`tests/conftest.py`** | — | Shared fixtures: `sample_student`, `mock_student_service`, `mock_db_helper`, `api_client` |
+| **`tests/unit/test_student_service.py`** | — | 11 unit tests covering `StudentService` get/add/delete with `MagicMock` |
+| **`tests/integration/test_student_repository.py`** | — | 5 integration tests against real PostgreSQL using isolated `test_students` table |
+| **`tests/api/test_student_routes.py`** | — | 11 API tests via FastAPI `TestClient` + `dependency_overrides` |
+| **App Version** | `15.0.0` | `16.0.0` |
+
+### Why
+
+Before Day 033 the project had zero automated tests. Every change required running the full Docker stack and manually hitting endpoints in Swagger UI — slow, error-prone, and impossible to do in CI.
+
+Three separate test categories are needed because:
+
+1. **Unit tests** (no DB, no network): Prove that `StudentService` business logic is correct — validation raises `ValueError`, `None` from repository becomes `StudentNotFoundException`, and every id is forwarded to the repository unchanged. These run in milliseconds and require no infrastructure.
+
+2. **Integration tests** (real local PostgreSQL): Prove that the SQL queries in `PostgresStudentRepository` are correct — the `INSERT` actually persists data, `SELECT` fetches it in the right shape, `DELETE` removes it, and missing-id lookups return `None`. Mocking the DB in these tests would give false confidence.
+
+3. **API tests** (TestClient + mocks): Prove the HTTP contract — correct status codes (200, 201, 404, 400), correct JSON response shapes, and that global exception handlers (`StudentNotFoundException → 404`, `ValueError → 400`) fire correctly over the wire.
+
+### How
+
+**Unit tests — `MagicMock` pattern:**
+
+```python
+@pytest.fixture
+def mock_repo():
+    return MagicMock()
+
+@pytest.fixture
+def service(mock_repo):
+    return StudentService(repository=mock_repo)
+
+def test_raises_student_not_found_when_missing(service, mock_repo):
+    mock_repo.get_student_by_id.return_value = None
+    with pytest.raises(StudentNotFoundException) as exc_info:
+        service.get_student_by_id(999)
+    assert exc_info.value.student_id == 999
+```
+
+**Integration tests — isolated table with proxy cursor:**
+
+```python
+# Redirect all SQL from 'students' to 'test_students' without touching production code.
+class _SwappingCursor:
+    def execute(self, sql: str, params=None):
+        swapped = re.sub(r'\bstudents\b', TEST_TABLE, sql)
+        return self._cur.execute(swapped, params)
+    def __getattr__(self, name):
+        return getattr(self._cur, name)
+```
+
+psycopg's `Cursor` is a C extension — its attributes are read-only, so direct monkey-patching (`cur.execute = ...`) raises `AttributeError`. The proxy pattern wraps the cursor at the Python level.
+
+**API tests — `dependency_overrides` + `unittest.mock.patch`:**
+
+```python
+# Override the FastAPI DI chain so the mock service handles all requests:
+app.dependency_overrides[get_student_service] = lambda: mock_student_service
+
+# Also patch the module-level _db_helper singleton so the lifespan's direct
+# call to get_db_helper() doesn't try to connect to Docker:
+with patch("dependencies._db_helper", mock_db_helper):
+    with TestClient(app, raise_server_exceptions=False) as client:
+        yield client
+```
+
+Key insight: `dependency_overrides` only intercepts code routed through FastAPI's `Depends()`. The lifespan calls `get_db_helper()` directly — a module-level singleton — so it must be patched with `unittest.mock.patch` instead.
+
+**Shared conftest.py fixtures:**
+
+```python
+@pytest.fixture
+def sample_student():
+    return Student_response_model(id=1, name="Alice Test", age=22, city="Mumbai",
+                                  email="alice.test@example.com")
+
+@pytest.fixture
+def mock_db_helper():
+    mock = MagicMock()
+    mock.open_pool.return_value = None
+    mock.close_pool.return_value = None
+    return mock
+```
+
+### Where
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `tests/__init__.py` | **NEW** | Package marker; describes the three test categories |
+| `tests/conftest.py` | **NEW** | Shared fixtures: `sample_student`, `mock_student_service`, `mock_db_helper`, `api_client` |
+| `tests/unit/__init__.py` | **NEW** | Unit package marker |
+| `tests/unit/test_student_service.py` | **NEW** | 11 tests for `StudentService` using `MagicMock` |
+| `tests/integration/__init__.py` | **NEW** | Integration package marker |
+| `tests/integration/test_student_repository.py` | **NEW** | 5 tests for `PostgresStudentRepository` against real local PostgreSQL |
+| `tests/api/__init__.py` | **NEW** | API package marker |
+| `tests/api/test_student_routes.py` | **NEW** | 11 tests for HTTP routes via FastAPI `TestClient` |
+
+### Test Results
+
+```
+============================= test session starts =============================
+platform win32 -- Python 3.14.5, pytest-8.3.3
+collected 27 items
+
+tests/api/   ... 11 passed
+tests/integration/ ... 5 passed
+tests/unit/  ... 11 passed
+
+======================== 27 passed, 1 warning in 8.78s ========================
+```
+
+| Category | Count | Speed | Infrastructure Needed |
+|----------|-------|-------|-----------------------|
+| unit/ | 11 | ~1.8 s | None |
+| integration/ | 5 | ~14 s | Local PostgreSQL |
+| api/ | 11 | ~0.7 s | None |
+| **Total** | **27** | **~8.8 s** | — |
+
 ---
 
 ## v22 — Day 029: Docker Deployment
