@@ -1658,3 +1658,43 @@ The concepts were initially completely new, but extensive hands-on experimentati
 - Continue Week 5 with **Repository Improvements + Testing**, applying the SQL/query knowledge from Days 30–32 inside the existing Student Management architecture and beginning systematic automated testing.
 
 **Status:** ✅ Day 032 Successfully Completed
+
+---
+
+---
+
+# Day 033 — Sunday, 6 September 2026
+
+## Day 033 Completed
+
+- Built a professional `pytest` test structure with separate `unit/`, `integration/`, and `api/` layers plus shared `conftest.py` fixtures.
+- Implemented **11 unit tests** for `StudentService` using `MagicMock`, covering happy paths, validation, not-found behavior, repository interaction, and database-independent execution.
+- Implemented **5 integration tests** for `PostgresStudentRepository` against a real PostgreSQL database using an isolated `test_students` table and proper test cleanup.
+- Implemented **11 FastAPI API tests** using `TestClient`, covering HTTP responses, CRUD behavior, validation errors, 404 handling, and response JSON contracts.
+- Applied FastAPI `dependency_overrides` and `unittest.mock.patch` to replace production dependencies and prevent API tests from requiring PostgreSQL/Docker.
+- Completed all Day 033 exercises with the final suite passing **27/27 tests**.
+
+## Lessons
+
+- Unit, integration, and API tests answer different questions; relying on only one layer creates incomplete confidence.
+- Dependency Injection creates a deliberate **testing seam** where real infrastructure can be replaced with controlled test doubles.
+- `MagicMock` allows service/business logic to be tested independently from PostgreSQL, Docker, environment variables, and network access.
+- Integration tests must keep the real database interaction intact so SQL and persistence behavior are actually verified.
+- FastAPI `dependency_overrides` only affects dependencies resolved through `Depends()`; direct calls such as the application lifespan require a different patching strategy.
+- When an external object's internals cannot be monkey-patched, a proxy/wrapper can provide a clean interception layer without modifying the underlying implementation.
+
+## Time
+
+~2 hours
+
+## Confidence
+
+10/10
+
+## Tomorrow
+
+Day 034 — Continue with the next planned Week 5 topic, building further on the repository/testing foundation established today.
+
+## Status
+
+✅ Day 033 Successfully Completed
