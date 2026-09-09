@@ -62,7 +62,7 @@ MiniProject_Student_Management/
 │   ├── unit/
 │   │   └── test_student_service.py # 11 unit tests — StudentService with MagicMock (no DB)
 │   ├── integration/
-│   │   └── test_student_repository.py # 5 integration tests — PostgresStudentRepository (real DB)
+│   │   └── test_student_repository.py # 17 integration tests — PostgresStudentRepository (real DB)
 │   └── api/
 │       └── test_student_routes.py  # 11 API tests — HTTP routes via FastAPI TestClient
 │
@@ -267,6 +267,16 @@ HTTP Request
 - 🩹 **Lifespan Patch** — `unittest.mock.patch("dependencies._db_helper", mock)` prevents the lifespan's direct `get_db_helper()` call from attempting a DB connection in API tests
 - 🔒 **Isolated Test Table** — integration tests use a `test_students` table (created/truncated/dropped per session); real `students` table is never modified during testing
 - 🔀 **_SwappingCursor Proxy** — rewrites `students` → `test_students` in SQL before reaching psycopg's read-only C-extension cursor; avoids `AttributeError: 'Cursor' attribute is read-only`
+
+**Database Integration Testing (Day 034)**
+
+- 🧪 **Extended Integration Suite** — `tests/integration/test_student_repository.py` now has 17 tests (+12 from Day 034); full suite is 39 tests; run with `python -m pytest tests/ -v`
+- ⛓️ **Constraint Failure Tests** — `TestConstraintFailures` proves UNIQUE email and PRIMARY KEY constraints are enforced by real PostgreSQL; a `MagicMock` cannot verify these exist
+- ↩️ **Transaction Rollback Verification** — `TestTransactionRollback` proves a rolled-back transaction leaves no trace: INSERT a row, raise an exception before commit, verify the row is absent on a fresh connection
+- ⚛️ **Atomicity Experiment** — `TestAtomicity` proves partial commits are impossible: INSERT A (succeeds), INSERT B (UNIQUE violation, raises), verify A is also absent after automatic ROLLBACK
+- 🔄 **db_transaction Fixture** — new `db_transaction` fixture demonstrates the BEGIN→Test→ROLLBACK cleanup pattern: `conn.autocommit = False` → yield → `conn.rollback()` in teardown; fastest isolation approach when the repository accepts an external connection
+- 🧹 **Failure Cleanup Drill** — `TestFailureCleanupDrill` proves that pytest fixture teardown (`TRUNCATE`) runs unconditionally, even when the test body raises an exception
+- 🔀 **Suite Isolation Proof** — `TestSuiteIsolation` verifies tests are order-independent: each test sees exactly the data it inserted, regardless of which tests ran before
 
 **Exception Handling (Day 018)**
 

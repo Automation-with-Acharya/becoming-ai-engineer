@@ -2,6 +2,95 @@
 
 Full changelog for every version of this project: **what** changed, **why** it was changed, **how** it was implemented, **where** in the codebase, and **when** (which day of the course).
 
+## v24 - Day 034: Database Integration Testing
+
+**When:** Day 034  
+**Theme:** Deep-dive into database integration testing patterns — transaction lifecycle, `TRUNCATE` vs `ROLLBACK` cleanup strategies, constraint failure verification, atomicity experiments, and test suite isolation. 12 new integration tests added, bringing the suite total to 39.
+
+### What Changed
+
+| Area | Before (v23) | After (v24) |
+| ---- | ------------- | ------------ |
+| **`tests/integration/test_student_repository.py`** | 5 integration tests | 17 integration tests (+12 from Day 034) |
+| **`TestConstraintFailures`** | — | 2 tests: UNIQUE email violation, PRIMARY KEY collision |
+| **`TestTransactionRollback`** | — | 2 tests: rollback leaves no data, committed data survives |
+| **`TestAtomicity`** | — | 1 test: partial write in failed transaction does not persist |
+| **`TestTransactionAwareFixture`** | — | 2 tests: BEGIN→Test→ROLLBACK `db_transaction` fixture demo |
+| **`TestFailureCleanupDrill`** | — | 2 tests: fixture teardown runs even when test raises |
+| **`TestSuiteIsolation`** | — | 3 tests: tests are order-independent |
+| **`db_transaction` fixture** | — | New session-level fixture demonstrating BEGIN/ROLLBACK pattern |
+| **Total test count** | 27 | 39 |
+
+### Why
+
+Day 033 proved that integration tests can verify real SQL queries. Day 034 goes deeper into the **transaction model** underlying those tests:
+
+1. **Constraint failures** must be proven with a real database. A `MagicMock` can only simulate a raised exception — it cannot verify that the UNIQUE or PRIMARY KEY constraint actually exists in the schema and is enforced by PostgreSQL.
+
+2. **TRUNCATE vs ROLLBACK** is an architectural decision, not just a style choice. TRUNCATE commits data and physically removes it afterward; ROLLBACK means data never commits. Each has different performance characteristics and infrastructure requirements.
+
+3. **Atomicity** ("all or nothing") is one of the four ACID guarantees. The `TestAtomicity` test concretely demonstrates that a successfully executed `INSERT A` inside a transaction is rolled back when a subsequent `INSERT B` in the same transaction fails — proving there is no "partial commit" state.
+
+4. **Fixture teardown is unconditional**. Unlike a `try/finally` in the test body, pytest's fixture teardown runs even when the test body crashes. This is the engineering reason to put cleanup in fixtures, not in tests.
+
+5. **Isolation must be structural, not assumed**. The `TestSuiteIsolation` class proves that tests do not share state by verifying each test sees exactly the data it inserted — regardless of execution order.
+
+### How
+
+**Transaction-aware `db_transaction` fixture:**
+
+```python
+@pytest.fixture
+def db_transaction(db_helper: DatabaseHelper):
+    with db_helper._pool.connection() as conn:
+        conn.autocommit = False   # BEGIN is implicit on first statement
+        yield conn
+        conn.rollback()           # TEARDOWN: always roll back
+```
+
+The fixture yields a connection inside an open transaction. All SQL on that connection participates. When the fixture teardown runs (always, even on failure), it issues `ROLLBACK`, discarding everything. This demonstrates the cleanest possible test isolation when the repository accepts an external connection.
+
+**Constraint failure test:**
+
+```python
+def test_duplicate_email_raises_exception(self, repo):
+    repo.add_student(Student_model(email="duplicate@example.com", ...))
+    with pytest.raises(Exception) as exc_info:
+        repo.add_student(Student_model(email="duplicate@example.com", ...))
+    assert any(k in str(exc_info.value).lower()
+               for k in ["unique", "duplicate", "violat", "constraint"])
+```
+
+**Atomicity experiment:**
+
+```python
+def test_partial_write_is_rolled_back(self, db_helper):
+    email_a = email_b = "atomic.a@example.com"  # same email → UNIQUE violation
+
+    try:
+        with db_helper._pool.connection() as conn:
+            conn.autocommit = False
+            with conn.cursor() as cur:
+                cur.execute("INSERT ... VALUES (101, ..., email_a)")  # succeeds
+                cur.execute("INSERT ... VALUES (102, ..., email_b)")  # raises!
+            conn.commit()
+    except Exception:
+        pass   # UniqueViolation — auto rollback happened
+
+    # Verify A is ALSO absent (not just B)
+    count = fresh_conn.execute("SELECT COUNT(*) FROM test_students WHERE id IN (101, 102)")
+    assert count == 0   # PASSES — neither A nor B persists
+```
+
+### Where
+
+```
+tests/integration/test_student_repository.py   extended: +12 tests, db_transaction fixture,
+                                                           6 new test classes
+```
+
+---
+
 ## v23 — Day 033: Automated Testing
 
 **When:** Day 033  
