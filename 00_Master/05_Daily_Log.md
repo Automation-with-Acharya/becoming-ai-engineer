@@ -1698,3 +1698,43 @@ Day 034 — Continue with the next planned Week 5 topic, building further on the
 ## Status
 
 ✅ Day 033 Successfully Completed
+
+---
+
+---
+
+# Day 034 — Tuesday, 8 September 2026
+
+## Day 034 Completed
+
+- Extended the PostgreSQL integration test suite from 5 to 17 tests by implementing 12 new Day 034 integration tests covering transactions, constraints, atomicity, cleanup, fixtures, and isolation.
+- Implemented and verified a transaction-aware `db_transaction` pytest fixture demonstrating the `BEGIN → Test → ROLLBACK` pattern with automatic rollback during fixture teardown.
+- Compared `TRUNCATE` vs `ROLLBACK` as database-test isolation strategies and identified the architectural requirement for externally controlled transactions when using rollback-based isolation.
+- Verified real PostgreSQL `UNIQUE` and `PRIMARY KEY` constraint enforcement using integration tests against the actual database rather than mocks.
+- Proved transaction atomicity by demonstrating that a successful first write is also rolled back when a subsequent write in the same transaction fails.
+- Verified fixture-driven failure cleanup and test-order independence, with the complete test suite finishing at **39/39 tests passed**.
+
+## Lessons
+
+- Integration tests provide confidence that unit tests with `MagicMock` cannot: they execute real SQL and verify real PostgreSQL behavior, constraints, and persistence semantics.
+- `ROLLBACK` provides clean transactional isolation only when the repository/application allows the test to control the transaction; internally committed repository transactions require another cleanup strategy such as `TRUNCATE`.
+- Atomicity means a transaction is truly all-or-nothing: an earlier successful SQL statement does not become permanent when a later statement in the same transaction fails.
+- pytest fixtures are the correct place for test-environment lifecycle and cleanup because fixture teardown remains independent of whether the test body succeeds or fails.
+- Test isolation should be structural rather than assumed; resetting state before every test makes test behavior independent of execution order.
+- Transaction boundaries are an architectural concern, not merely a database detail, and strongly influence how integration tests should be designed in production-grade systems.
+
+## Time
+
+~2 hours
+
+## Confidence
+
+10/10
+
+## Tomorrow
+
+Day 035 — Continue with the next planned Week 5 topic.
+
+## Status
+
+✅ Day 034 Successfully Completed
