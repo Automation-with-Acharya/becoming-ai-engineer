@@ -1647,6 +1647,7 @@ The concepts were initially completely new, but extensive hands-on experimentati
 ## Time
 
 **Planned:** 2 Hours
+
 **Actual:** ~2 Hours
 
 ## Confidence
@@ -1685,7 +1686,9 @@ The concepts were initially completely new, but extensive hands-on experimentati
 
 ## Time
 
-~2 hours
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
 
 ## Confidence
 
@@ -1725,7 +1728,9 @@ Day 034 — Continue with the next planned Week 5 topic, building further on the
 
 ## Time
 
-~2 hours
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
 
 ## Confidence
 
@@ -1738,3 +1743,45 @@ Day 035 — Continue with the next planned Week 5 topic.
 ## Status
 
 ✅ Day 034 Successfully Completed
+
+---
+
+---
+
+# Day 035 — Daily Progress Log
+
+## Day 035 Completed (crisp summary in 5-6 bullet points):
+
+- Shifted from individual test writing to a **structured backend test strategy**, introducing `pytest.ini` with `unit`, `integration`, `api`, and `smoke` markers plus controlled test discovery.
+- Expanded the automated suite from **39 to 51 tests**: 23 unit, 17 integration, and 11 API tests, with selective execution verified for each marker group.
+- Reworked validation coverage using **`pytest.mark.parametrize`** for six blank/whitespace name cases, making one business rule explicit, compact, and easy to extend.
+- Generated and analyzed a real **73% coverage report (597 statements, 160 missed)**, then classified uncovered code by engineering risk instead of blindly targeting 100%.
+- Added **three permanent regression tests** for the blank-name validation bug and created a **6-test smoke suite** covering the critical GET/list/create HTTP paths as a fast deployment gate.
+- Completed the **critical-path test architecture and repository quality review**, mapping HTTP → service → repository → database behavior to the correct test layer and documenting CI/CD execution flow.
+
+## Lessons (crisp summary in 5-6 bullet points):
+
+- **Test strategy matters more than test count**: tests should be organized by purpose, speed, infrastructure dependency, and risk.
+- **Coverage is a diagnostic tool, not a correctness score**; the important question is which untested paths carry the greatest production risk.
+- **Parametrization is ideal for rule boundaries** where many inputs exercise the same behavior, while separate tests remain useful for distinct scenarios.
+- **Regression tests should encode previously identified failure modes**, so future refactors automatically protect important business invariants.
+- **Smoke tests are a deployment gate, not a replacement for the full suite**: they provide rapid feedback on critical user-facing paths before deeper verification.
+- **Layered testing works because each layer protects a different contract**: unit tests protect business logic, API tests protect HTTP behavior, and integration tests protect real SQL/database behavior.
+
+## Time
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+## Confidence
+
+10/10
+
+## Tomorrow
+
+Start Week 6 — React fundamentals and frontend engineering, while carrying forward the testing discipline and layered architecture from Week 5.
+
+## Status
+
+✅ Day 035 Successfully Completed
