@@ -2,6 +2,95 @@
 
 Full changelog for every version of this project: **what** changed, **why** it was changed, **how** it was implemented, **where** in the codebase, and **when** (which day of the course).
 
+## v25 - Day 035: Backend Test Strategy
+
+**When:** Day 035
+**Theme:** Shift from writing individual tests to designing a full test strategy — markers, selective execution, parametrize, coverage analysis, regression testing, and a formal architecture diagram.
+
+### What Changed
+
+| Area | Before (v24) | After (v25) |
+| ---- | ------------ | ----------- |
+| **`pytest.ini`** | Did not exist | NEW: markers (unit/integration/api/smoke), testpaths, norecursedirs |
+| **`tests/unit/test_student_service.py`** | 11 unit tests, no markers | 23 tests: +`@pytest.mark.unit`, +`TestValidationParametrize` (9 parametrize tests), +`TestRegressionBlankNameNotPersistedToDb` (3 regression tests) |
+| **`tests/api/test_student_routes.py`** | 11 tests, no markers | `@pytest.mark.api` on all 5 classes; `@pytest.mark.smoke` on 3 critical-path classes |
+| **`tests/integration/test_student_repository.py`** | 17 tests, no markers | `@pytest.mark.integration` on all 7 classes |
+| **Selective execution** | `pytest tests/` only | `pytest -m unit`, `-m integration`, `-m api`, `-m smoke` all work |
+| **Coverage** | Not measured | 73% overall (identified gaps: search, auth layer) |
+| **Total test count** | 39 | 51 |
+
+### Why
+
+1. **Markers (`pytest.ini`)**: Without markers, every run includes all 17 integration tests that need a live PostgreSQL. Developers without Docker running locally cannot get fast feedback. Markers let `pytest -m "not integration"` run 34 fast tests in < 1 second.
+
+2. **Parametrize (Exercise 3)**: Expressing "blank names are rejected" as 6 separate test methods obscures the pattern. A single `@pytest.mark.parametrize` block documents the complete rule boundary, makes the test output self-identifying (e.g., `test_blank_name_raises[tab]`), and makes adding new edge cases trivial.
+
+3. **Coverage (Exercise 4)**: The suite is 51 tests but we had no visibility into which production paths were untested. Running coverage revealed: `search_students()` is completely untested (65% repository, 70% service), auth layer is 40-42% covered, and `app.py` at 0% is correctly untestable.
+
+4. **Regression test (Exercise 6)**: The blank-name-reaches-DB bug was a real risk in earlier versions. A permanent regression guard (`TestRegressionBlankNameNotPersistedToDb`) directly answers: "If the validation is removed in 6 months, will pytest catch it?" Yes — `mock_repo.add_student.assert_not_called()` would immediately fail.
+
+5. **Smoke tests (Exercise 7)**: A `pytest -m smoke` gate (6 tests, < 1s) provides a fast CI/CD gate before running the full suite. If the basic HTTP paths are broken, no deployment should proceed.
+
+### How
+
+**`pytest.ini` — marker registration and discovery control:**
+
+```ini
+[pytest]
+markers =
+    unit: Unit tests — no DB required
+    integration: Integration tests — require local PostgreSQL
+    api: API tests — TestClient; no DB required
+    smoke: Smoke tests — critical-path subset
+
+testpaths = tests
+norecursedirs = old_versions .git __pycache__ .pytest_cache htmlcov
+addopts = --tb=short
+```
+
+`testpaths` was critical — without it, `pytest -m unit` tried to collect `old_versions/` and crashed with `ImportPathMismatchError`.
+
+**Parametrize — one rule, many examples:**
+
+```python
+@pytest.mark.parametrize("invalid_name", [
+    "", " ", "   ", "\\t", "\\n", "\\t\\n  \\t",
+], ids=["empty_string", "single_space", "multi_space", "tab", "newline", "mixed_whitespace"])
+def test_blank_name_raises_value_error(self, invalid_name, service, mock_repo):
+    with pytest.raises(ValueError):
+        service.add_student(name=invalid_name, age=20, city="City", email="v@e.com")
+    mock_repo.add_student.assert_not_called()
+```
+
+**Regression test — answers "will this be caught if re-introduced?":**
+
+```python
+def test_blank_name_does_not_reach_repository(self, service, mock_repo):
+    with pytest.raises(ValueError, match="(?i)empty"):
+        service.add_student(name="   ", age=25, ...)
+    mock_repo.add_student.assert_not_called()   # This fails if validation is removed
+```
+
+**Coverage run:**
+
+```bash
+python -m coverage run --source=. --omit="tests/*,old_versions/*" -m pytest tests/ -q
+python -m coverage report --skip-empty
+# TOTAL: 73% (597 stmts, 160 missed)
+```
+
+### Where
+
+```
+pytest.ini                                  NEW: marker registration, test discovery config
+tests/unit/test_student_service.py          +12 tests: @pytest.mark.unit, parametrize,
+                                                        regression tests
+tests/api/test_student_routes.py            @pytest.mark.api and @pytest.mark.smoke added
+tests/integration/test_student_repository.py  @pytest.mark.integration added to all classes
+```
+
+---
+
 ## v24 - Day 034: Database Integration Testing
 
 **When:** Day 034  

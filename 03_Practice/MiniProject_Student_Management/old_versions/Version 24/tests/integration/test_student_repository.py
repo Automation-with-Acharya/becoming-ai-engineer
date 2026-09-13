@@ -2,6 +2,7 @@
 test_student_repository.py - Integration tests for PostgresStudentRepository.
 
 Day 033 Exercise 7 + Day 034 Exercises 1-10.
+Day 035 Exercise 2: @pytest.mark.integration applied to all test classes.
 
 WHY integration tests?
 ----------------------
@@ -298,9 +299,13 @@ def db_transaction(db_helper: DatabaseHelper):
 # Day 033 Exercise 7: Core integration tests (5 tests)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestIntegrationStudentRepository:
     """
     Day 033 Exercise 7: Real repository against real (isolated) table.
+
+    Day 035 Exercise 2: @pytest.mark.integration -> run with `pytest -m integration -v`.
+    Requires a local PostgreSQL connection; auto-skipped if DB is not reachable.
 
     Proves:
       - SQL INSERT is correct and returns the assigned id.
@@ -389,6 +394,7 @@ class TestIntegrationStudentRepository:
 # Day 034 Exercise 4: Constraint failure tests (2 tests)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestConstraintFailures:
     """
     Day 034 Exercise 4: Prove that PostgreSQL constraints are enforced.
@@ -481,6 +487,7 @@ class TestConstraintFailures:
 # Day 034 Exercise 5: Transaction rollback verification (2 tests)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestTransactionRollback:
     """
     Day 034 Exercise 5: Prove that a rolled-back transaction leaves no trace.
@@ -582,6 +589,7 @@ class TestTransactionRollback:
 # Day 034 Exercise 7: Atomicity — partial write in a failed transaction
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestAtomicity:
     """
     Day 034 Exercise 7: Partial writes inside a failed transaction do NOT persist.
@@ -652,6 +660,7 @@ class TestAtomicity:
 # Day 034 Exercise 2: db_transaction fixture demonstration (2 tests)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestTransactionAwareFixture:
     """
     Day 034 Exercise 2: Demonstrate BEGIN -> Test -> ROLLBACK via db_transaction.
@@ -719,6 +728,7 @@ class TestTransactionAwareFixture:
 # Day 034 Exercise 9: Failure cleanup drill (2 tests)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestFailureCleanupDrill:
     """
     Day 034 Exercise 9: Fixture teardown runs even when a test raises.
@@ -768,6 +778,7 @@ class TestFailureCleanupDrill:
 # Day 034 Exercise 10: Test suite isolation — order independence (3 tests)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestSuiteIsolation:
     """
     Day 034 Exercise 10: Prove that tests are order-independent.

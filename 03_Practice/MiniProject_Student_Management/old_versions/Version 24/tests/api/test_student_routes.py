@@ -1,7 +1,8 @@
 """
 test_student_routes.py — API-level tests using FastAPI TestClient.
 
-Day 033 Exercises covered: 8, 9, 10.
+Day 033 Exercises: 8, 9, 10.
+Day 035 Exercises: 2 (@pytest.mark.api), 7 (@pytest.mark.smoke on critical paths).
 
 WHY API tests?
 --------------
@@ -48,8 +49,16 @@ from models.student import Student_response_model
 # Exercise 8 + 9: GET /students/{id} — happy path
 # ─────────────────────────────────────────────────────────────────────────────
 
+@pytest.mark.api
+@pytest.mark.smoke  # Exercise 7: GET /students/{id} is a critical-path smoke test
 class TestGetStudentById:
-    """HTTP tests for GET /students/{student_id}."""
+    """HTTP tests for GET /students/{student_id}.
+
+    Day 035 Exercise 2: @pytest.mark.api  -> run with `pytest -m api -v`.
+    Day 035 Exercise 7: @pytest.mark.smoke -> run with `pytest -m smoke -v`.
+    Smoke justification: if GET /students/{id} is broken, the entire student
+    read path is down and no deployment should proceed.
+    """
 
     def test_get_existing_student_returns_200(
         self,
@@ -115,8 +124,14 @@ class TestGetStudentById:
 # Exercise 10: GET /students/{id} — not-found path → HTTP 404
 # ─────────────────────────────────────────────────────────────────────────────
 
+@pytest.mark.api
 class TestGetStudentNotFound:
-    """HTTP 404 tests — connecting Day 13 (CRUD), Day 18 (exception handling), Day 33 (tests)."""
+    """HTTP 404 tests — connecting Day 13 (CRUD), Day 18 (exception handling), Day 33 (tests).
+
+    Day 035 Exercise 2: @pytest.mark.api.
+    Not marked smoke because the error path, while important, is secondary
+    to the happy-path smoke check above.
+    """
 
     def test_get_nonexistent_student_returns_404(
         self,
@@ -187,8 +202,16 @@ class TestGetStudentNotFound:
 # GET /students/ — list all students
 # ─────────────────────────────────────────────────────────────────────────────
 
+@pytest.mark.api
+@pytest.mark.smoke  # Exercise 7: GET /students/ is part of the critical smoke path
 class TestGetAllStudents:
-    """HTTP tests for GET /students/."""
+    """HTTP tests for GET /students/.
+
+    Day 035 Exercise 2: @pytest.mark.api.
+    Day 035 Exercise 7: @pytest.mark.smoke.
+    Smoke justification: listing students is a fundamental read operation
+    whose failure indicates basic routing or serialisation is broken.
+    """
 
     def test_get_all_students_returns_200_with_list(
         self,
@@ -232,8 +255,16 @@ class TestGetAllStudents:
 # POST /students/ — create student
 # ─────────────────────────────────────────────────────────────────────────────
 
+@pytest.mark.api
+@pytest.mark.smoke  # Exercise 7: POST /students/ (create) is a critical smoke path
 class TestCreateStudent:
-    """HTTP tests for POST /students/."""
+    """HTTP tests for POST /students/.
+
+    Day 035 Exercise 2: @pytest.mark.api.
+    Day 035 Exercise 7: @pytest.mark.smoke.
+    Smoke justification: if creating a student fails, the write path is broken
+    and the system is not ready for production traffic.
+    """
 
     def test_create_student_returns_201_with_created_record(
         self,
@@ -292,8 +323,14 @@ class TestCreateStudent:
 # DELETE /students/{id}
 # ─────────────────────────────────────────────────────────────────────────────
 
+@pytest.mark.api
 class TestDeleteStudent:
-    """HTTP tests for DELETE /students/{student_id}."""
+    """HTTP tests for DELETE /students/{student_id}.
+
+    Day 035 Exercise 2: @pytest.mark.api.
+    Not marked smoke — delete is important but less critical than read/write for
+    a basic smoke gate (the system can be usable even if delete has issues).
+    """
 
     def test_delete_existing_student_returns_200(
         self,
@@ -334,9 +371,11 @@ class TestDeleteStudent:
 # Exercise 9: Explicit dependency override demonstration
 # ─────────────────────────────────────────────────────────────────────────────
 
+@pytest.mark.api
 class TestDependencyOverride:
-    """
-    Exercise 9: Prove that dependency_overrides swaps the real service.
+    """Exercise 9: Prove that dependency_overrides swaps the real service.
+
+    Day 035 Exercise 2: @pytest.mark.api.
 
     The api_client fixture (in conftest.py) already applies the override.
     This class makes the mechanism explicit and documented for educational

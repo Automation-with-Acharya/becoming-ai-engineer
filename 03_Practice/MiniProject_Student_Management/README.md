@@ -57,15 +57,16 @@ MiniProject_Student_Management/
 ├── schemas/
 │   └── student_schema.py           # Input validation: sanitizes & validates student name
 │
-├── tests/                          # Automated test suite (Day 033)
+├── tests/                          # Automated test suite (Days 033–035)
 │   ├── conftest.py                 # Shared fixtures: sample_student, mock_service, api_client
 │   ├── unit/
-│   │   └── test_student_service.py # 11 unit tests — StudentService with MagicMock (no DB)
+│   │   └── test_student_service.py # 23 unit tests — StudentService with MagicMock (no DB)
 │   ├── integration/
 │   │   └── test_student_repository.py # 17 integration tests — PostgresStudentRepository (real DB)
 │   └── api/
 │       └── test_student_routes.py  # 11 API tests — HTTP routes via FastAPI TestClient
 │
+├── pytest.ini                      # pytest config: markers, testpaths, norecursedirs
 ├── version_history.md              # Full changelog: what/why/how/where/when for every version
 ├── day_21_practice.md              # Day 021 Exercise 5: full request-flow trace (Client → Pool → DB)
 └── README.md                       # This file
@@ -267,6 +268,16 @@ HTTP Request
 - 🩹 **Lifespan Patch** — `unittest.mock.patch("dependencies._db_helper", mock)` prevents the lifespan's direct `get_db_helper()` call from attempting a DB connection in API tests
 - 🔒 **Isolated Test Table** — integration tests use a `test_students` table (created/truncated/dropped per session); real `students` table is never modified during testing
 - 🔀 **_SwappingCursor Proxy** — rewrites `students` → `test_students` in SQL before reaching psycopg's read-only C-extension cursor; avoids `AttributeError: 'Cursor' attribute is read-only`
+
+**Backend Test Strategy (Day 035)**
+
+- 📋 **pytest.ini** — NEW config file: registers markers (unit/integration/api/smoke), sets `testpaths = tests`, excludes `old_versions/` from collection
+- 🏷️ **Test Markers** — `@pytest.mark.unit` on all 5 unit test classes; `@pytest.mark.integration` on all 7 integration classes; `@pytest.mark.api` + `@pytest.mark.smoke` on 3 critical-path API classes; run selectively: `pytest -m unit` (23 tests, 0.1s), `pytest -m integration` (17 tests, 8.7s), `pytest -m api` (11 tests, 0.7s), `pytest -m smoke` (6 tests, 0.7s)
+- 🔢 **Parametrize** — `TestValidationParametrize` expresses the blank-name rule as 9 cases (6 invalid + 3 valid) using `@pytest.mark.parametrize`; one rule, many examples — each case gets its own named test output (e.g., `test_blank_name_raises[tab]`)
+- 🛡️ **Regression Test** — `TestRegressionBlankNameNotPersistedToDb` (3 tests) permanently guards against blank names reaching the database; answers: "If the validation is removed in 6 months, will pytest catch it?"
+- 📊 **Coverage Analysis** — `coverage run -m pytest` reveals 73% overall; high-coverage: schemas/100%, models/100%, middleware/97%; gaps: `search_students()` (65% repo, 70% service) and auth layer (40-42%) identified as Category A/B priorities
+- 🚀 **Smoke Gate** — `pytest -m smoke` runs 6 critical-path API tests in < 1s; CI/CD pattern: smoke → pass? → full suite → pass? → deploy
+- 📈 **Total Test Count** — 51 tests (unit: 23, integration: 17, api: 11); up from 39
 
 **Database Integration Testing (Day 034)**
 
