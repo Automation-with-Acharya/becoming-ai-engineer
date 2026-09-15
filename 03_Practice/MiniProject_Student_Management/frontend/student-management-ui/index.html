@@ -1,0 +1,48 @@
+<!doctype html>
+<!--
+  index.html — Exercise 3: Where is the root DOM node?
+
+  This file is the single HTML page served by Vite's dev server.
+  It is NOT generated dynamically — Vite treats it as the true entry point
+  and injects the compiled JS bundle(s) into it at build time.
+
+  Key elements:
+    <div id="root">  — the empty mount point React attaches to.
+                       main.jsx calls document.getElementById('root') and
+                       passes it to React's createRoot().
+
+    <script type="module" src="/src/main.jsx">
+                     — Vite processes this module tag, discovers all imports
+                       (App.jsx, components, CSS), bundles them, and serves
+                       the result via HMR (Hot Module Replacement) in dev mode.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO: descriptive title for the Student Management UI -->
+    <title>Student Management System — Day 036</title>
+    <meta
+      name="description"
+      content="React + Vite Day 036 exercises: component trees, props, state, conditional rendering."
+    />
+  </head>
+  <body>
+    <!--
+      #root — the single DOM node React controls.
+      React replaces the content of this div with the virtual DOM tree
+      rendered by <App />.  It starts empty so non-JS clients see nothing
+      until hydration (SSR is not used here).
+    -->
+    <div id="root"></div>
+
+    <!--
+      Vite entry point — module type tells the browser (and Vite) to treat
+      this as an ES module.  Vite intercepts this request in dev mode and
+      returns the HMR-enabled bundle.
+    -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

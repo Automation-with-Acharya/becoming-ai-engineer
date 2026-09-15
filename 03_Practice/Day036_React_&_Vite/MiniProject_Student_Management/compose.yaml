@@ -1,0 +1,252 @@
+# =============================================================================
+# compose.yaml — Docker Compose Orchestration for Student Management System
+#
+# Defines two services that form the complete application stack:
+#   - api  : FastAPI application (built from local Dockerfile)
+#   - db   : PostgreSQL database (official Docker Hub image)
+#
+# Day 026: Health Checks — pg_isready probe on db; api waits for healthy db.
+# Day 027: Configuration — explicit environment: block; restart: on-failure.
+# Day 028: Internal Networking documented — Compose creates a shared bridge
+#   network automatically. Both services join it and can reach each other
+#   using their service name as the DNS hostname. The db port is NOT needed
+#   for API↔DB communication; it is only for host-side tools (e.g. pgAdmin).
+# Day 029: Deployment verification — Dockerfile hardened with a non-root user
+#   (appuser); .dockerignore updated to exclude .git, compose.yaml, and editor
+#   config; full end-to-end smoke test (auth → CRUD → PostgreSQL) verified.
+#
+# Full end-to-end traffic flow:
+#
+#   Browser
+#     |
+#     | http://localhost:8000
+#     v
+#   Windows Host (port published by Docker)
+#     |
+#     | 8000:8000 port mapping
+#     v
+#   FastAPI Container  (api service)
+#     |
+#     | DB_HOST=db  ← Docker internal DNS resolves 'db' → container IP
+#     v
+#   Docker Bridge Network  (miniproject_student_management_default)
+#     |
+#     v
+#   PostgreSQL Container  (db service)  port 5432 internal
+#     |
+#     v
+#   PostgreSQL Server
+#
+# The 'db' container also publishes port 5433 on the host so that tools
+# running on Windows (e.g. pgAdmin, psql) can connect directly. This port
+# mapping is NOT used by the api container; it connects via the internal
+# network at db:5432.
+#
+# Variable resolution flow (Day 027):
+#   .env file                     ← loaded by Compose at project level
+#     │  (Compose interpolation)
+#     ├── used to fill ${VAR} placeholders in this file
+#     └── injected into container via env_file: .env
+#   environment: block            ← per-service explicit overrides (higher precedence)
+#     └── wins over env_file when the same key appears in both
+#
+# Precedence (highest → lowest) inside a container:
+#   1. environment: key in compose.yaml
+#   2. env_file: file listed in compose.yaml
+#   3. image defaults (ENV in Dockerfile)
+#
+# Usage:
+#   docker compose up            → start both services (foreground)
+#   docker compose up -d         → start both services (background / detached)
+#   docker compose config        → show fully resolved configuration after interpolation
+#   docker compose down          → stop and remove containers (data volume is preserved)
+#   docker compose down -v       → stop, remove containers AND delete the db volume (data loss!)
+#   docker compose logs api      → stream logs from the api service only
+#   docker compose ps            → list running services and their status
+#   docker compose exec api sh   → open a shell inside the running api container
+#   docker network ls            → list all Docker networks (find the Compose project network)
+#   docker network inspect <net> → show containers, IPs, and aliases on a network
+#   docker compose run --rm api env → print every env var that reaches the api container
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # api — FastAPI Application Service
+  #
+  # Built from the Dockerfile at the project root (./).
+  #
+  # Two env-injection mechanisms work together here:
+  #
+  #   env_file: .env
+  #     Loads EVERY variable from .env into the container environment.
+  #     Practical for loading the full set of defaults without listing them all.
+  #     Values are not visible in this file — you must open .env to read them.
+  #
+  #   environment: block  (Day 027)
+  #     Lists specific variables explicitly with ${VAR} interpolation.
+  #     Compose reads ${VAR} from .env at project level and substitutes the value.
+  #     An explicit environment key OVERRIDES the same key from env_file.
+  #     Benefit: reader can see exactly which variables are passed to this
+  #     service, and any variable can be overridden without changing .env
+  #     (e.g., set DEBUG=true in the environment block for a dev run).
+  #
+  # restart: on-failure  (Day 027)
+  #   Docker restarts the api container automatically if the process exits with
+  #   a non-zero exit code (crash, unhandled exception, OOM kill, etc.).
+  #   It does NOT restart on a clean exit (code 0) — e.g., intentional shutdown.
+  #   Policy options for reference:
+  #     no            — never restart (default)
+  #     always        — always restart regardless of exit code
+  #     on-failure    — restart only on non-zero exit (chosen here)
+  #     unless-stopped — always restart unless explicitly stopped by the user
+  #
+  # depends_on (Day 026)
+  #   condition: service_healthy holds api until db has passed its pg_isready
+  #   health check — preventing the race condition of the api starting before
+  #   PostgreSQL has finished initializing.
+  # ---------------------------------------------------------------------------
+  api:
+    build: .                          # Build the FastAPI image from the local Dockerfile
+    ports:
+      - "8000:8000"                   # Expose the API on host port 8000
+    env_file:
+      - .env                          # Bulk-load ALL .env variables as container defaults
+    environment:
+      # ── Application ──────────────────────────────────────────────────────────
+      # Explicit listing makes these vars visible here and individually overridable.
+      # ${VAR} is interpolated from .env by Compose before the container starts.
+      # An override here wins over the same key in env_file above.
+      APP_NAME: ${APP_NAME}
+      APP_VERSION: ${APP_VERSION}
+      DEBUG: ${DEBUG}
+      # ── Security ─────────────────────────────────────────────────────────────
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES}
+      # ── Database connection (FastAPI → Postgres) ──────────────────────────────
+      # DB_HOST=db uses Docker's internal DNS — 'db' resolves to the db container IP.
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_POOL_MIN_SIZE: ${DB_POOL_MIN_SIZE}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE}
+      # ── Logging ──────────────────────────────────────────────────────────────
+      LOG_LEVEL: ${LOG_LEVEL}
+    volumes:
+      - ./logs:/app/logs              # Persist application log files on the host
+    restart: on-failure               # Restart api if it crashes (non-zero exit); not on clean stop
+    depends_on:
+      db:
+        condition: service_healthy    # Wait until db passes its health check before starting api
+    # Networking note (Day 028):
+    #   Compose attaches both api and db to the project's default bridge network
+    #   automatically. No explicit 'networks:' key is needed here for basic
+    #   service-to-service communication. The api reaches the db using:
+    #     DB_HOST=db  →  Docker DNS  →  db container IP  →  port 5432
+    #   'localhost' inside the api container refers to the api container itself
+    #   (its own loopback), NOT the db container. This is why DB_HOST must be
+    #   'db' (the service name) and never 'localhost' in a Compose setup.
+
+  # ---------------------------------------------------------------------------
+  # db — PostgreSQL Database Service
+  #
+  # Uses the official postgres image from Docker Hub.
+  # Credentials (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD) are sourced
+  # entirely from the .env file — the same values used by the FastAPI app.
+  # This ensures the database the api connects to is always consistent with
+  # the database that Postgres initializes.
+  #
+  # The named volume 'postgres_data' persists database files between restarts.
+  # Without this, every 'docker compose down' would erase all student records.
+  #
+  # healthcheck (Day 026):
+  #   pg_isready is the standard tool for probing Postgres readiness.
+  #   It opens a connection to the server and exits 0 if Postgres is accepting
+  #   connections, non-zero otherwise. It is bundled inside every official
+  #   postgres image so no extra installation is needed.
+  #
+  #   Parameters chosen:
+  #     interval    5s  — probe every 5 seconds
+  #     timeout     5s  — if pg_isready does not respond within 5 s, count it as a failure
+  #     retries     5   — declare "unhealthy" only after 5 consecutive failures (~25 s total)
+  #     start_period 10s — grace period after container start before failures count;
+  #                        Postgres initialization (initdb on first run) can take several
+  #                        seconds; failures during this window do not count toward retries
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:latest            # Official PostgreSQL image (always pulls the latest release)
+    ports:
+      # Port mapping for HOST-SIDE tools only (pgAdmin, psql from Windows).
+      # The api container does NOT use this mapping — it reaches Postgres
+      # directly through the internal Docker bridge network at db:5432.
+      #
+      # Two connectivity paths:
+      #   Internal (api → db):
+      #     api container → Docker network → db:5432   (no port mapping needed)
+      #   External (host tools → db):
+      #     Windows host → localhost:5433 → published port → db container:5432
+      - "5433:5432"                   # Host 5433 → container 5432 (avoids conflict with local Postgres)
+    env_file:
+      - .env                          # Postgres reads POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD from here
+    volumes:
+      # PostgreSQL 18+ stores data in a major-version subdirectory under /var/lib/postgresql
+      # (e.g., /var/lib/postgresql/18/main). Mounting at /var/lib/postgresql (not /data)
+      # lets Postgres manage the subdirectory structure itself, which is required for
+      # pg_upgrade compatibility and correct behaviour on postgres:latest (18+).
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      # pg_isready probes whether PostgreSQL is ready to accept connections.
+      # -U uses the same username as the one configured in POSTGRES_USER.
+      # -d uses the same database name as configured in POSTGRES_DB.
+      # Exit code 0 = healthy, non-zero = unhealthy.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s                    # Run the probe every 5 seconds
+      timeout: 5s                     # Fail the probe if it takes longer than 5 seconds
+      retries: 5                      # Declare unhealthy after 5 consecutive failures
+      start_period: 10s               # Give Postgres up to 10 s to initialize before counting failures
+
+# =============================================================================
+# Volumes
+#
+# Named volumes are managed by Docker (not a host path bind-mount).
+# Docker creates and maintains 'postgres_data' on the host automatically.
+# The volume survives 'docker compose down' but is removed by 'docker compose down -v'.
+# =============================================================================
+volumes:
+  postgres_data:                      # Persistent storage for PostgreSQL data files
+
+# =============================================================================
+# Networks (Day 028)
+#
+# Compose automatically creates a default bridge network for the project:
+#   Name: miniproject_student_management_default
+#   Driver: bridge
+#
+# Both 'api' and 'db' are automatically attached to this network. Services
+# communicate using their Compose service name as the DNS hostname:
+#   - 'db' resolves to the PostgreSQL container's internal IP
+#   - 'api' resolves to the FastAPI container's internal IP
+#
+# The network is isolated from other Docker projects by default. No external
+# traffic can reach containers on this network unless a port is explicitly
+# published in the 'ports:' section.
+#
+# Useful diagnostic commands:
+#   docker network ls
+#     Lists all Docker networks; find the one named after this project.
+#
+#   docker network inspect miniproject_student_management_default
+#     Shows: driver, subnet, gateway, connected containers with IP addresses,
+#     and DNS aliases. Use this to verify DB_HOST=db resolves correctly.
+#
+#   docker compose exec api sh
+#     Enters the api container shell to run name-resolution experiments.
+#     Inside: 'env | grep DB_HOST' confirms DB_HOST=db
+#             'cat /etc/resolv.conf' shows Docker's internal DNS server (127.0.0.11)
+#
+# No explicit 'networks:' key is required in this file because Compose manages
+# the default network automatically. It is documented here for clarity.
+# =============================================================================

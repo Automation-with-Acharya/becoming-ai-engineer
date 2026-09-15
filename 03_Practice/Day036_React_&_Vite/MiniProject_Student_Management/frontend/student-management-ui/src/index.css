@@ -1,0 +1,33 @@
+/* index.css
+ *
+ * Global / reset styles loaded in main.jsx before any component CSS.
+ *
+ * Responsibilities:
+ *   - CSS box-model reset (border-box everywhere)
+ *   - Base font and line-height
+ *   - Background and text colour for the whole page
+ *
+ * Component-specific styles live in App.css.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;  /* consistent sizing: padding doesn't overflow elements */
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  background-color: #f1f5f9;  /* light slate background */
+  color: #1e293b;             /* dark slate text */
+  min-height: 100vh;
+}
+
+/* Smooth focus ring for keyboard navigation */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
