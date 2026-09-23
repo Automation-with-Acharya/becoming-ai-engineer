@@ -1748,7 +1748,7 @@ Day 035 — Continue with the next planned Week 5 topic.
 
 ---
 
-# Day 035 — Daily Progress Log
+# Day 035 — Sunday, 13 September 2026
 
 ## Day 035 Completed (crisp summary in 5-6 bullet points):
 
@@ -1790,7 +1790,9 @@ Start Week 6 — React fundamentals and frontend engineering, while carrying for
 
 ---
 
-Day 036 Completed (crisp summary in 5-6 bullet points):
+# Day 035 — Sunday, 13 September 2026
+
+## Completed:
 
 - Completed React + Vite fundamentals by scaffolding the `student-management-ui` frontend and understanding the Vite → `index.html` → `main.jsx` → React component-tree flow.
 - Built the first reusable component architecture: `App`, `Header`, `StudentSummary`, `StudentList`, `StudentCard`, and `Footer`, with clear separation of responsibilities.
@@ -1799,7 +1801,7 @@ Day 036 Completed (crisp summary in 5-6 bullet points):
 - Built a clean Student Management first screen and connected derived summary statistics (`Total`, `Active`, `Inactive`) from the student data without unnecessary state.
 - Completed the Day 36 DSA sprinkle in both JavaScript and Python: Two Sum using a hash map and First Duplicate using a set, with `O(n)` time / `O(n)` space solutions.
 
-Lessons (crisp summary in 5-6 bullet points):
+## Lessons:
 
 - React is primarily about modeling UI as a component tree and letting data/state flow through that tree rather than manually manipulating the DOM.
 - Props are the mechanism for passing data and callbacks between components; state belongs at the level where the changing information needs to be owned and coordinated.
@@ -1808,6 +1810,20 @@ Lessons (crisp summary in 5-6 bullet points):
 - List keys represent component identity during reconciliation, so a stable backend identity such as `student.id` is preferable to mutable display values such as `student.name`.
 - The DSA practice reinforced practical hash-map / set thinking, complementing JavaScript work in React while retaining Python fluency for interview-style problem solving.
 
-Time: 2 hours
-Confidence: 9/10
-Tomorrow: Day 037 — Continue Week 6 with React ↔ FastAPI API integration and real backend data flow.
+## Time:
+
+**Planned:** 2 Hours
+
+**Actual:** ~2 Hours
+
+## Confidence:
+
+9/10
+
+## Tomorrow:
+
+Day 037 — Continue Week 6 with React ↔ FastAPI API integration and real backend data flow.
+
+## Status:
+
+✅ Day 036 Successfully Completed
