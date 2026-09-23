@@ -1827,3 +1827,45 @@ Day 037 — Continue Week 6 with React ↔ FastAPI API integration and real back
 ## Status:
 
 ✅ Day 036 Successfully Completed
+
+---
+
+---
+
+# Day 037 — React ↔ FastAPI API Integration
+
+## Completed:
+
+- Completed all 12 Day 037 exercises, covering FastAPI verification, API contract inspection, API-module design, live API integration, loading/error/empty states, `useEffect`, CORS, Vite proxying, and browser Network debugging.
+- Replaced frontend mock data with live FastAPI data through the new `src/api/studentApi.js` HTTP boundary, while keeping `StudentList` → `StudentCard` presentation architecture intact.
+- Implemented explicit React data states: Loading, Error, Empty, and Data, with accessible status messaging and state-driven rendering.
+- Configured and verified the Vite development proxy (`/api/*` → FastAPI) and traced the complete Browser → Vite → FastAPI → JSON → React state → UI flow through DevTools.
+- Completed the DSA sprinkle: Frequency Counter and Group Students by City in JavaScript and Python, using `Map`/dictionary-based `O(n)` approaches.
+- Updated the Mini Project, documentation, answer sheet, version history, and frontend build artifacts for the Day 037 integration milestone.
+
+## Lessons:
+
+- A dedicated frontend API module creates a clean HTTP boundary and keeps React components focused on presentation and state orchestration.
+- Data-fetching UI must explicitly distinguish Loading, Error, Empty, and Data states instead of treating an empty initial array as “no data.”
+- `useEffect` is used to coordinate the network side effect after rendering; the async work belongs inside the effect rather than making the effect callback itself async.
+- Clean component boundaries pay off when the data source changes: the same presentation components can consume live backend data without being rewritten.
+- Vite's development proxy simplifies local frontend-backend communication, but it does not replace correct production CORS configuration.
+- Browser Network-tab tracing is an essential full-stack debugging skill for diagnosing the path from UI request to backend response and back into React state.
+
+## Time:
+
+**Planned:** 2 Hours
+
+**Actual:** ~4 Hours total, spread across approximately 5–6 calendar days because of experiments, other projects, interview work, and festivals.
+
+## Confidence:
+
+9.5/10
+
+## Tomorrow:
+
+Day 038 — Continue Week 6 with React Forms, controlled inputs, client-side validation, and integration of form state with the Student Management UI.
+
+## Status:
+
+✅ Day 037 Successfully Completed
