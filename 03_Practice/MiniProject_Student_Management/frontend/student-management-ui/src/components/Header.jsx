@@ -15,7 +15,7 @@ function Header() {
     // Semantic <header> landmark element
     <header className="app-header">
       <h1>🎓 Student Management System</h1>
-      <p className="header-subtitle">React + Vite + FastAPI — Day 037 Integration</p>
+      <p className="header-subtitle">React + Vite + FastAPI — Day 038 Forms &amp; Input Validation</p>
     </header>
   );
 }

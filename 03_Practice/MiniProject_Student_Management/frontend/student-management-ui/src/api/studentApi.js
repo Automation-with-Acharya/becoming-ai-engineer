@@ -96,3 +96,59 @@ export async function getStudentById(id) {
 
   return response.json();
 }
+
+// ---------------------------------------------------------------------------
+// POST /students/ — create a new student (Day 038 Exercise 7)
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates a new student record on the FastAPI backend.
+ *
+ * Day 038 Exercise 7: Submit to FastAPI
+ *
+ * Sends an HTTP POST request to /api/students/ (rewritten by Vite dev proxy
+ * to http://localhost:8000/students/).
+ *
+ * Architecture flow:
+ *   AddStudentForm → createStudent() → POST /api/students/ → Vite proxy
+ *   → FastAPI router → Pydantic validation → StudentService → Repository → DB
+ *
+ * @param {Object} student - Payload containing { name, age, city, email, is_active }
+ * @returns {Promise<Object>} The persisted student record returned by the server,
+ *                            including the auto-generated `id`.
+ * @throws {Error} If HTTP response status is not 2xx, parsed with server error details if available.
+ */
+export async function createStudent(student) {
+  const response = await fetch("/api/students/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(student),
+  });
+
+  if (!response.ok) {
+    let errorDetail = `HTTP ${response.status}`;
+    try {
+      const errorData = await response.json();
+      if (errorData) {
+        if (typeof errorData.detail === "string") {
+          errorDetail = errorData.detail;
+        } else if (Array.isArray(errorData.detail)) {
+          // FastAPI / Pydantic validation error format: [{loc: [...], msg: "...", type: "..."}]
+          errorDetail = errorData.detail
+            .map((err) => `${err.loc?.slice(1).join(".") || "field"}: ${err.msg}`)
+            .join("; ");
+        } else if (errorData.message) {
+          errorDetail = errorData.message;
+        }
+      }
+    } catch {
+      // If response body is not JSON (e.g. gateway error HTML), retain status code
+    }
+    throw new Error(`Failed to create student: ${errorDetail}`);
+  }
+
+  return response.json();
+}
+

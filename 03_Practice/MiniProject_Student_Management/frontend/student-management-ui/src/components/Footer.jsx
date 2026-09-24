@@ -14,7 +14,7 @@ function Footer() {
   return (
     // Semantic <footer> landmark element
     <footer className="app-footer">
-      <p>Day 037 — React &amp; FastAPI Integration &nbsp;|&nbsp; Student Management Mini Project</p>
+      <p>Day 038 — React Forms &amp; Input Validation &nbsp;|&nbsp; Student Management Mini Project</p>
     </footer>
   );
 }

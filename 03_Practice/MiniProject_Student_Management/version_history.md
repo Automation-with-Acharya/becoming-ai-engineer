@@ -2,6 +2,113 @@
 
 Full changelog for every version of this project: **what** changed, **why** it was changed, **how** it was implemented, **where** in the codebase, and **when** (which day of the course).
 
+## v28 - Day 038: React Forms & Input Validation
+
+**When:** Day 038  
+**Theme:** Build the full-stack CRUD write path. Implement a controlled student creation form (`AddStudentForm`) with a single state object, generic `handleChange`, native HTML validation, client-side React validation, accessible error messages, submitting states, server-error handling, API POST communication via `studentApi.createStudent()`, automatic form reset, and real-time student list refresh.
+
+### What Changed
+
+| Area | Before (v27) | After (v28) |
+| ---- | ------------ | ----------- |
+| **`src/components/AddStudentForm.jsx`** | — | NEW: Form component with controlled inputs, client validation, accessibility attributes, submit handler, and reset logic |
+| **`src/api/studentApi.js`** | `getStudents()`, `getStudentById()` | + `createStudent(student)`: issues HTTP POST `/api/students/` with JSON payload and error parsing |
+| **`src/App.jsx`** | Read-only list display | Full CRUD write/read orchestrator: mounts `AddStudentForm` and wires `onStudentAdded={loadStudents}` callback |
+| **`src/App.css`** | Display messages & cards | + Grid form styles, input focus rings, invalid state highlights, field error text, submit buttons, and alert banners |
+| **`src/components/Header.jsx`** | "Day 037 Integration" | "Day 038 Forms & Input Validation" subtitle |
+| **`src/components/Footer.jsx`** | "Day 037 Integration" | "Day 038 Forms & Input Validation" subtitle |
+| **Exercises answer sheet** | — | Written: `Day038_React_Forms_&_Input_Validation/Exercises_answer_sheet.md` |
+
+### Why
+
+1. **Controlled components (Exercises 2 & 3):** Storing form values in React state (`useState`) establishes React as the single source of truth. The generic `handleChange` handler with computed property names (`[name]`) provides an extensible pattern for text, number, email, and boolean checkbox inputs without multiple duplicate setters.
+2. **Layered validation (Exercises 4, 5, 13):** Native HTML attributes (`required`, `min`, `minLength`, `type="email"`) provide instant browser-level filtering. React-level validation (`validateForm()`) provides accessible, user-friendly feedback without network round-trips. Server-side validation (Pydantic + PostgreSQL) remains the authoritative, tamper-proof gatekeeper.
+3. **Accessibility (Exercise 6):** Pairing inputs with `aria-invalid` and `aria-describedby` pointing to field errors ensures assistive technologies (screen readers) announce invalid states and reasons when users navigate the form.
+4. **Submitting state & API error resilience (Exercises 8 & 9):** Managing a `submitting` boolean prevents accidental double submissions during network transit. A `finally` block guarantees button re-enablement, and `submitError` captures and surfaces backend 400, 422, or 500 error messages.
+5. **Full CRUD write-read loop (Exercises 10, 11, 12):** When a new student is successfully added via POST, `onStudentAdded()` immediately triggers `loadStudents()` (GET), updating the summary stats and card grid without a page reload, while `setForm(INITIAL_FORM_STATE)` resets the input fields.
+
+### How
+
+**AddStudentForm.jsx — Generic change handler:**
+
+```jsx
+function handleChange(event) {
+  const { name, value, type, checked } = event.target;
+
+  setForm((previous) => ({
+    ...previous,
+    [name]: type === "checkbox" ? checked : value,
+  }));
+}
+```
+
+**studentApi.js — createStudent write path:**
+
+```javascript
+export async function createStudent(student) {
+  const response = await fetch("/api/students/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(student),
+  });
+
+  if (!response.ok) {
+    let errorDetail = `HTTP ${response.status}`;
+    try {
+      const errorData = await response.json();
+      if (errorData?.detail) {
+        errorDetail = typeof errorData.detail === "string" 
+          ? errorData.detail 
+          : errorData.detail.map(e => `${e.loc?.slice(1).join(".")}: ${e.msg}`).join("; ");
+      }
+    } catch { /* fallback to HTTP status */ }
+    throw new Error(`Failed to create student: ${errorDetail}`);
+  }
+
+  return response.json();
+}
+```
+
+**App.jsx — Write-Read Refresh Integration:**
+
+```jsx
+const loadStudents = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    const data = await getStudents();
+    setStudents(data);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
+// In JSX:
+<AddStudentForm onStudentAdded={loadStudents} />
+```
+
+### Where
+
+```
+frontend/student-management-ui/src/components/
+    AddStudentForm.jsx                          NEW: Exercises 1–6, 8, 9, 11
+    Header.jsx                                  subtitle updated to Day 038
+    Footer.jsx                                  subtitle updated to Day 038
+frontend/student-management-ui/src/api/
+    studentApi.js                               + createStudent() (Exercise 7)
+frontend/student-management-ui/src/
+    App.jsx                                     integrated AddStudentForm + onStudentAdded (Exercises 10 & 12)
+    App.css                                     + form grid, focus states, invalid states, error banners
+README.md                                       updated structure + Day 038 feature section
+version_history.md                              This entry (v28)
+Day038_React_Forms_&_Input_Validation/
+    Exercises_answer_sheet.md                   Written: complete answers for all 13 exercises
+```
+
+---
+
 ## v27 - Day 037: React + FastAPI API Integration
 
 **When:** Day 037  
